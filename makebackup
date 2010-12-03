@@ -1,0 +1,202 @@
+#!/bin/bash
+#------------------------------------------------------------------------------#
+# vi: set sw=4 ts=4 ai:                            ("set modeline" in ~/.exrc) #
+#------------------------------------------------------------------------------#
+# Program      : make_backup                                                   #
+#                                                                              #
+# Author       : Ton Kersten                        Groesbeek, The Netherlands #
+#                                                                              #
+# Date         : 26-03-2008                                       Time : 11:35 #
+#                                                                              #
+# Description  : Create a backup of all specified directories                  #
+#                                                                              #
+# Parameters   : None                                                          #
+#                                                                              #
+# Pre reqs     : Rsync, the backupit tool and Perl                             #
+#                                                                              #
+# Exit codes   :    0 -> OK                                                    #
+#                <> 0 -> !OK                                                   #
+#                                                                              #
+# Updates      : None (yet)                                                    #
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+#                    V e r s i o n   i n f o r m a t i o n                     #
+#------------------------------------------------------------------------------#
+# $Id::                                                                     $: #
+# $Revision::                                                               $: #
+# $Author::                                                                 $: #
+# $Date::                                                                   $: #
+# $URL::                                                                    $: #
+#------------------------------------------------------------------------------#
+#             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+# Determine the program name and the 'running directory'                       #
+#------------------------------------------------------------------------------#
+IAM="${0##*/}"
+CRD="$( [[ "${0:0:2}" = "./" ]] &&
+	{	printf "${PWD}/${0#./}"
+	} || {
+		printf "${0}"
+	})"
+CRD="${CRD%/*}"
+CUR="${PWD}"
+
+#------------------------------------------------------------------------------#
+# Save the shell settings                                                      #
+#------------------------------------------------------------------------------#
+SETA=0; [[ ${-} = *a* ]] && SETA=1
+SETE=0; [[ ${-} = *e* ]] && SETE=1
+SETU=0; [[ ${-} = *u* ]] && SETU=1
+SETX=0; [[ ${-} = *x* ]] && SETX=1
+
+#------------------------------------------------------------------------------#
+# Set and unset the needed shell settings                                      #
+#------------------------------------------------------------------------------#
+set +o noclobber            # Overwrite existing files, if needed              #
+set -o nounset              # Don't allow uninitialized variables              #
+set +o errexit              # No returncode checking                           #
+
+#------------------------------------------------------------------------------#
+# Define the date/time function                                                #
+#------------------------------------------------------------------------------#
+Now()
+{
+	date '+%Y-%m-%d %H:%M:%S'
+
+	return 0
+}
+
+#------------------------------------------------------------------------------#
+# Start the logging                                                            #
+#------------------------------------------------------------------------------#
+exec > /var/log/${IAM}.log
+exec 2>&1
+
+#------------------------------------------------------------------------------#
+# Define constants                                                             #
+#------------------------------------------------------------------------------#
+VER="1.$(awk '/^# \$Revision::/ { print $3 }' ${0})"
+CONFIGFILE="${CRD}/${IAM}.conf"
+PATH="${PATH}:/bin:/sbin"
+PATH="${PATH}:/usr/bin:/usr/sbin"
+PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
+BCK="${CRD}/backupit"
+HOSTNAME="$(hostname)"
+WD="80"                             # Screen width                             #
+s="$(printf "%${WD}s" "")"; s="${s// /-}"			# Single dash line         #
+d="$(printf "%${WD}s" "")"; d="${d// /=}"			# Double dash line         #
+typeset -i RC=0
+typeset -i BCKS=0
+
+#------------------------------------------------------------------------------#
+# Announce the start of the program                                            #
+#------------------------------------------------------------------------------#
+echo "$(Now) -> ${IAM} Starting"
+echo
+echo "${d}"
+echo
+echo "     System backup at ${HOSTNAME} ended BACKUPSTATUS"
+echo
+echo "${d}"
+echo
+
+#------------------------------------------------------------------------------#
+# Read the config file                                                         #
+#------------------------------------------------------------------------------#
+CONFIGFILE="${1:-${CRD}/${IAM}.conf}"
+if [[ -r "${CONFIGFILE}" ]]
+then
+	. "${CONFIGFILE}" || {
+		echo "Error processing config '${CONFIGFILE}'!" >&2
+		exit 1
+	}
+else
+	echo "Could not find config '${CONFIGFILE}'!" >&2
+	exit 1
+fi
+
+#------------------------------------------------------------------------------#
+# Backup MySQL if this is requested                                            #
+#------------------------------------------------------------------------------#
+if [[ x"${BACKUPMYSQL:-yes}" = x"yes" ]]
+then
+	if [[ -x ${CRD}/mysqlbackup ]]
+	then
+		echo "$(Now) -> ${IAM} Starting MySQL backup on host '$(hostname)'"
+		${CRD}/mysqlbackup
+		echo "$(Now) -> ${IAM} Finished MySQL backup on host '$(hostname)'"
+	else
+		echo "Cannot find MySQL backup tool '${CRD}/mysqlbackup'"
+		echo "MySQL backup will be skipped!!"
+	fi
+fi
+
+#------------------------------------------------------------------------------#
+# Create the backups for all defined sources and destinations                  #
+#------------------------------------------------------------------------------#
+for CNT in $(seq 1 ${BCKS})
+do
+	echo
+	echo "$(Now) -> ${DESC[${CNT}]}"
+	echo
+	for DST in ${DSTS[${CNT}]}
+	do
+		[[ ! -d ${DST} ]] && mkdir -p ${DST}
+
+		#----------------------------------------------------------------------#
+		# Create the backup source string                                      #
+		#----------------------------------------------------------------------#
+		SRC=""
+		for dir in ${DIRS[${CNT}]}
+		do
+			SRC="${SRC} --source=${dir}"
+		done
+
+		#----------------------------------------------------------------------#
+		# Do the backup                                                        #
+		#----------------------------------------------------------------------#
+		echo "$(Now) -> Starting: ${BCK} --max=${MAX} ${SRC} --target=${DST}"
+		${BCK} -v --max=${MAX} ${SRC} --target=${DST}
+		RC=${RC}+${?}
+		echo
+		echo "${s}"
+		echo
+	done
+	echo
+	echo "${d}"
+	echo
+done
+
+#------------------------------------------------------------------------------#
+# Check if it all went well                                                    #
+#------------------------------------------------------------------------------#
+if [[ ${RC} = 0 ]]
+then
+	echo "$(Now) -> Backup ended OK!"
+	BCKSTATUS="OK! Returncode = 0"
+else
+	if [[ ${RC} = 24 ]]
+	then
+		echo "$(Now) -> Backup ended OK!"
+		BCKSTATUS="OK! (Some files vanished). Returncode = 24"
+	else
+		echo "$(Now) -> Backup ended NOT OK! Returncode = ${RC}"
+		BCKSTATUS="NOT OK! Returncode = ${RC}"
+	fi
+fi
+
+#------------------------------------------------------------------------------#
+# Clear the log redirection and insert the program status into the log         #
+#------------------------------------------------------------------------------#
+exec 1>&-
+exec 2>&-
+sed -i.bck "s/BACKUPSTATUS/${BCKSTATUS}/" /var/log/${IAM}.log
+rm /var/log/${IAM}.log.bck
+
+#------------------------------------------------------------------------------#
+# That's all, folks!                                                           #
+#------------------------------------------------------------------------------#
+exit ${RC}
