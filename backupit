@@ -1,0 +1,537 @@
+#!/usr/bin/perl
+#------------------------------------------------------------------------------#
+# vi: set sw=4 ts=4 ai:                            ("set modeline" in ~/.exrc) #
+#------------------------------------------------------------------------------#
+# Program      : backupit                                                      #
+#                                                                              #
+# Author       : Ton Kersten                        Groesbeek, The Netherlands #
+#                                                                              #
+# Date         : 26-03-2008                                       Time : 11:04 #
+#                                                                              #
+# Description  : Create backups of directories and trees.                      #
+#                Create hardlinks and keep a number of instances               #
+#                                                                              #
+# Pre reqs     : Perl > 5.6.0 and rsync                                        #
+#                                                                              #
+# Exit codes   :    0 -> OK                                                    #
+#                <> 0 -> !OK                                                   #
+#                                                                              #
+# Updates      : None (yet)                                                    #
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+#                    V e r s i o n   i n f o r m a t i o n                     #
+#------------------------------------------------------------------------------#
+# $Id:: backupit 3 2010-05-20 09:09:29Z tonk                                $: #
+# $Revision:: 3                                                             $: #
+# $Author:: Ton Kersten <Ton.Kersten@ATComputing.nl>                        $: #
+# $Date:: 2010-05-27 09:31:07 +0200 (Thu, 27 May 2010)                      $: #
+# $Hash::                                                                   $: #
+#------------------------------------------------------------------------------#
+#             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
+#------------------------------------------------------------------------------#
+
+require 5;
+use strict;
+use warnings;
+use Carp;
+use Getopt::Std;
+use File::stat;
+use Fcntl ':mode';
+use POSIX qw(strftime);
+use Getopt::Long;
+use Term::ANSIColor;
+
+#------------------------------------------------------------------------------#
+# find out what my own name is                                                 #
+#------------------------------------------------------------------------------#
+my $version = "1.0";
+my $iam = $0;
+$iam =~ s/.*\///;
+
+#------------------------------------------------------------------------------#
+# Check if the Perl version is high enough                                     #
+#------------------------------------------------------------------------------#
+my @ver = split/\./, $];
+my $ver = $ver[0] . $ver[1]*10;
+if ($ver < 560)
+{       $ver =~ s/(.)/$1./g;
+        die "Perl is not version 5.6.0 or higher, but version $ver\n";
+}
+
+my @SOURCES  = qw();
+my @EXCLUDES = qw(*~ /proc);
+my $verbose;
+my $debug;
+
+#------------------------------------------------------------------------------#
+# help / usage function                                                        #
+#------------------------------------------------------------------------------#
+sub usage(;$)
+{	my $msg = shift;
+	my $txt;
+
+	if ($msg)
+	{	print "\n";
+		print "===============================================================\n";
+		print color 'bold red';
+		print "  --> $msg\n";
+		print color 'reset';
+		print "===============================================================\n";
+	}
+
+	print color 'bold cyan';
+	print "\n$iam";
+	print color 'reset';
+	print " version $version by ";
+	print color 'bold yellow';
+	print "Ton Kersten\n";
+	print color 'reset';
+
+	($txt = <<EOM) =~ s/^\t+//gm;
+
+		Usage: $iam [options] --source <source> --target <target>
+
+		Options:
+		    -h | --help | -?             : display this help
+		    -v | --verbose               : be more verbose
+		    -d | --debug                 : be very verbose
+		    -s | --source                : the top of the directory tree to backup
+		    -t | --target                : the destination for the backup tree
+		    -m | --max <max cycles>      : keep a maximum of <max> cycles
+		    -e | --exclude <glob string> : exclude pattern from source
+		    -n | --name <string>         : name to use for the backup
+
+		This will create a maximum of <max cycles> directories in <target>
+		with a backup of <source>. The files and directories in each new cycle
+		are hardlinks to the previous cycle. Only modified files are actually
+		copied and require extra disk space.
+
+		<source> must be a valid rsync source directory
+		<target> must be a writeable directory
+
+		Multiple --exclude options may be used
+
+		Run "perldoc" on this file for more information.
+
+EOM
+
+	print("$txt");
+	exit(1);
+}
+
+
+#------------------------------------------------------------------------------#
+# get all the current cycles                                                   #
+#------------------------------------------------------------------------------#
+sub get_cycles($)
+{	print("entering get_cycles\n") if ($debug);
+
+	my $dir = shift;
+
+	#--------------------------------------------------------------------------#
+	# get all real entries in the directory                                    #
+	#--------------------------------------------------------------------------#
+	my @filelist = grep {!/^\.$|^\.\.$/ } glob "$dir/*";
+
+	#--------------------------------------------------------------------------#
+	# only interrested in directories                                          #
+	#--------------------------------------------------------------------------#
+	my @dirlist = grep {S_ISDIR(stat($_)->mode)} @filelist;
+
+	#--------------------------------------------------------------------------#
+	# changing the inode of the directory will mess up the sort order          #
+	#--------------------------------------------------------------------------#
+	return sort { stat($a)->ctime <=> stat($b)->ctime } @dirlist;
+}
+
+
+#------------------------------------------------------------------------------#
+# create a new cycle                                                           #
+#------------------------------------------------------------------------------#
+sub create_newcycle($$$)
+{	print("entering create_newcycle\n") if ($debug);
+
+	my ($prev, $target, $name) = @_;
+	my $ret = 1;
+	my $devnull;
+
+	#--------------------------------------------------------------------------#
+	# create a new cycle                                                       #
+	#--------------------------------------------------------------------------#
+	if (! defined $name)
+	{	$name = strftime('bck-%Y-%m-%d-%H.%M.%S', localtime());
+	}
+
+	print("creating new cycle: $target/$name\n") if ($verbose || $debug);
+	mkdir "$target/$name" || usage("cannot create new cycle directory '$target/$name'");
+
+	#--------------------------------------------------------------------------#
+	# create hardlinks from previous cycle to this cycle                       #
+	#--------------------------------------------------------------------------#
+	if ($prev)
+	{	if (-d $prev)
+		{	print("creating symlinks for the new cycle\n") if ($verbose || $debug);
+			if ($debug)
+			{	print("cd '$prev'; find . -print | cpio -dpl '$target/$name'\n");
+				$devnull = "";
+			}
+			else
+			{	$devnull = ">/dev/null 2>&1";
+			}
+			$ret = system("cd '$prev'; find . -print | cpio -dpl '$target/$name' $devnull");
+			print("command ended with returncode $ret\n") if ($debug);
+
+			if ($ret != 0)
+			{	die("creating links failed: $target/$name");
+			}
+		}
+	}
+
+	return "$target/$name";
+}
+
+
+#------------------------------------------------------------------------------#
+# make the backup, using rsync                                                 #
+#------------------------------------------------------------------------------#
+sub make_backup($)
+{	print("entering make_backup\n") if ($debug);
+	my $target = shift;
+	my $ret = 1;
+	my $devnull;
+
+	my @excludes = map {" --exclude='$_'"} @EXCLUDES;
+	my $exclude  = join(" ", @excludes);
+	my @sources  = map {" '$_'"} @SOURCES;
+	my $source   = join(" ", @sources);
+	$source =~ s/^\s+//;
+	$source =~ s/\s+/ /;
+
+	print("creating backup for $source in $target\n") if ($verbose || $debug);
+	if ($debug)
+	{	print("rsync -aRqvx --delete -e ssh $exclude $source '$target'\n");
+		$devnull="";
+	}
+	else
+	{	$devnull=">/dev/null 2>&1";
+	}
+	$ret = system("rsync -aRqvx --delete -e ssh $exclude $source '$target' $devnull");
+	print("command ended with returncode $ret\n") if ($ret != 0);
+
+	if ($ret != 0)
+	{	die("backup failed: $source => $target");
+	}
+}
+
+
+#------------------------------------------------------------------------------#
+# remove the last cycle(s)                                                     #
+#------------------------------------------------------------------------------#
+sub remove_oldcycles($$)
+{	print("entering remove_oldcycles\n") if ($debug);
+
+	my ($cycles, $max_cycles) = @_;
+
+	#--------------------------------------------------------------------------#
+	# remove the last cycles                                                   #
+	#--------------------------------------------------------------------------#
+	print("removing old cycles\n") if ($verbose || $debug);
+	while (@$cycles >= $max_cycles)
+	{	my $cycle = shift @$cycles;
+		print("    removing cycle: $cycle\n") if ($verbose || $debug);
+		system("rm -rf '$cycle'");
+	}
+}
+
+
+#------------------------------------------------------------------------------#
+# main program                                                                 #
+#------------------------------------------------------------------------------#
+sub main()
+{	print("entering main\n") if ($debug);
+
+	my $help;
+	my $target = "/tmp";
+	my $max_cycles = 14;
+	my $name = strftime('bck-%Y-%m-%d-%H.%M.%S', localtime());
+
+	#--------------------------------------------------------------------------#
+	# if we do not have commandline options, show help                         #
+	#--------------------------------------------------------------------------#
+	usage() if ($#ARGV == -1);
+
+	#--------------------------------------------------------------------------#
+	# get and save the commandline options                                     #
+	#--------------------------------------------------------------------------#
+	my @OPT = @ARGV;
+	Getopt::Long::Configure("pass_through");
+	GetOptions(	"help|h|?"		=> \$help,
+				"verbose|v"		=> \$verbose,
+				"debug|d"		=> \$debug,
+				"source|s=s"	=> \@SOURCES,
+				"target|t=s"	=> \$target,
+				"max|m=i"		=> \$max_cycles,
+				"name|n=s"		=> \$name,
+				"exclude|e=s"	=> \@EXCLUDES,
+			);
+	usage("Unknown option(s): @ARGV") if ($#ARGV != -1);
+	print("commandline options: @OPT\n") if ($debug);
+
+	#--------------------------------------------------------------------------#
+	# do we need to display help                                               #
+	#--------------------------------------------------------------------------#
+	usage() if ($help);
+
+	#--------------------------------------------------------------------------#
+	# check if we do have a target                                             #
+	#--------------------------------------------------------------------------#
+	usage("a backup target needs to be specified!") if (! $target);
+
+	#--------------------------------------------------------------------------#
+	# create the target if it doesn't exist                                    #
+	#--------------------------------------------------------------------------#
+	print("creating target $target\n") if ($debug);
+	if (! (-d $target && -w $target))
+	{	system("/bin/mkdir", "-p", "$target");
+	}
+
+	#--------------------------------------------------------------------------#
+	# check if the target exists and is writable                               #
+	#--------------------------------------------------------------------------#
+	print("checking target $target\n") if ($debug);
+	if (! (-d $target && -w $target))
+	{	usage("cannot create target '$target': $@");
+	}
+
+	#--------------------------------------------------------------------------#
+	# check if the maximum number of cycles is a usefull number                #
+	#--------------------------------------------------------------------------#
+	print("checking number of requested cycles ($max_cycles)\n") if ($debug);
+	usage("max cycles must at least be 1") if ($max_cycles < 1);
+
+	#--------------------------------------------------------------------------#
+	# remove old latest link                                                   #
+	#--------------------------------------------------------------------------#
+	print("unlinking latest link: $target/latest\n") if ($debug);
+	unlink $target . "/latest";
+
+	#--------------------------------------------------------------------------#
+	# cycles are sorted by ctime                                               #
+	# ctime changes when the mode/owner/timestamp of the directory changes     #
+	#--------------------------------------------------------------------------#
+	print("getting previous cycles\n") if ($debug);
+	my @cycles = get_cycles($target);
+	my $prev_cycle = $cycles[-1];
+	print("previous cycle is: $prev_cycle\n") if ($debug);
+
+	#--------------------------------------------------------------------------#
+	# create a new cycle based on the previous cycle                           #
+	# files/directories are hard linked from the previous cycle                #
+	#--------------------------------------------------------------------------#
+	print("creating new cycle\n") if ($debug);
+	my $newcycle = create_newcycle($prev_cycle, $target, $name);
+
+	#--------------------------------------------------------------------------#
+	# update the just created cycle with the source                            #
+	# new and modified files/directories are copied                            #
+	# removed file/directories are removed from this cycle but remain in the   #
+	# previous cycle                                                           #
+	#--------------------------------------------------------------------------#
+	print("making backup\n") if ($debug);
+	make_backup($newcycle);
+
+	#--------------------------------------------------------------------------#
+	# Create a new symlink                                                     #
+	#--------------------------------------------------------------------------#
+	print("creating latest link: $target/latest -> $newcycle\n") if ($debug);
+	symlink($name, $target . "/latest");
+
+	#--------------------------------------------------------------------------#
+	# remove old (based on ctime of directory) cycles                          #
+	# only max_cycles will remain                                              #
+	#--------------------------------------------------------------------------#
+	print("removing old cycles\n") if ($debug);
+	remove_oldcycles(\@cycles, $max_cycles) if ($max_cycles > 0);
+}
+
+main;
+
+exit(0);
+
+
+#------------------------------------------------------------------------------#
+# Documentation                                                                #
+#------------------------------------------------------------------------------#
+=pod
+
+=head1 NAME
+
+backupit - create a clever backup of directory trees
+
+=head1 SYNOPSIS
+
+backupit [options] --source <source> --target <target>
+
+=head1 DESCRIPTION
+
+=head2 Overview
+
+create a clever backup of directory trees
+
+=head2 Normal usage
+
+$ backupit --source=/usr --target=/backup/data --max=14
+
+Create a backup of the B</usr> directory and place the
+result in B</backup/data>. Keep B<14> instances of backup
+sets
+
+See L<"OPTIONS"> for commandline option details.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>, B<-h>, B<-?>
+
+=over 8
+
+=item Display program help
+
+=back
+
+=item B<--verbose>, B<-v>
+
+=over 8
+
+=item Be more verbose
+
+=back
+
+=item B<--debug>, B<-d>
+
+=over 8
+
+=item Be very verbose
+
+=back
+
+=item B<--source>, B<-s>
+
+=over 8
+
+=item This is the top of the directory tree
+
+=item Default: /
+
+=back
+
+=item B<--target>, B<-t>
+
+=over 8
+=item The location where the backup will be stored
+
+=item Default: /tmp
+
+=back
+
+=item B<--max>, B<-m>
+
+=over 8
+
+=item The maximum number of backups to keep
+
+=item Default: 14
+
+=back
+
+=item B<--exclude>, B<-e>
+
+=over 8
+
+=item Do not include these directories in the backup
+
+=item Multiple B<--exclude> may be used
+
+=item Default: <none>
+
+=back
+
+=item B<--name>, B<-n>
+
+=over 8
+
+=item The name of the backup set. Mostly used with time and
+date in it
+
+=item Default: bck-%Y-%m-%d-%H.%M.%S
+
+=back
+
+=back
+
+
+=head1 EXAMPLES
+
+$ backupit --source=/usr --target=/backup/data --max=14 --exclude=/backup/data
+
+Create a backup of the B</usr> directory and place the
+result in B</backup/data>. Keep B<14> instances of backup
+sets. Do exclude the backup directory itself
+
+$ backupit --source=/ --target=/backup --max=14 --exclude=/backup --exclude=/tmp
+
+Create a backup of the B</usr> directory and place the
+result in B</backup>. Keep B<14> instances of backup
+sets. Do exclude the backup directory itself and the /tmp directory
+
+=head1 DEFAULTS
+
+=over 4
+
+=item source  : /
+
+=item target  : /tmp
+
+=item cycles  : 14
+
+=item exclude : none
+
+=item name    : bck-%Y-%m-%d-%H.%M.%S
+
+=head1 FILES
+
+No log files or extra files are used
+
+=head1 BUGS
+
+None that I know of
+
+=head1 SEE ALSO
+
+=over 0
+
+=item L<perl(1)>
+
+=item L<cpio(1)>
+
+=item L<rsync(1)>
+
+=back
+
+=head1 AUTHOR
+
+Ton Kersten, TonK@Wandoo.nl
+
+=head1 COPYRIGHT
+
+(c) Copyright 2008 by Ton Kersten, The Netherlands
+
+Released under the GNU GPL version 2
+
+=head1 HISTORY
+
+This is the initial version
+
+=cut
