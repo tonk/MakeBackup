@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 4 2010-12-03 10:36:14 tonk                                 $: #
-# $Revision:: 4                                                             $: #
+# $Id:: backupit 5 2010-12-06 08:00:31 tonk                                 $: #
+# $Revision:: 5                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2010-12-03 11:12:35 +0100 (Fri, 03 Dec 2010)                      $: #
+# $Date:: 2010-12-06 08:00:31 +0100 (Mon, 06 Dec 2010)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -195,8 +195,8 @@ sub create_newcycle($$$)
 #------------------------------------------------------------------------------#
 # make the backup, using rsync                                                 #
 #------------------------------------------------------------------------------#
-sub make_backup($)
-{	print("entering make_backup\n") if ($debug);
+sub do_backup($)
+{	print("entering do_backup\n") if ($debug);
 	my $target = shift;
 	my $ret = 1;
 	my $devnull;
@@ -339,7 +339,7 @@ sub main()
 	# previous cycle                                                           #
 	#--------------------------------------------------------------------------#
 	print("making backup\n") if ($debug);
-	make_backup($newcycle);
+	do_backup($newcycle);
 
 	#--------------------------------------------------------------------------#
 	# Create a new symlink                                                     #
