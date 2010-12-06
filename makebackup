@@ -83,6 +83,7 @@ CONFIGFILE="${CRD}/${IAM}.conf"
 PATH="${PATH}:/bin:/sbin"
 PATH="${PATH}:/usr/bin:/usr/sbin"
 PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
+PATH="${PATH}:${CRD}"
 BCK="${CRD}/backupit"
 HOSTNAME="$(hostname)"
 WD="80"                             # Screen width                             #
@@ -132,6 +133,17 @@ then
 		echo "Cannot find MySQL backup tool '${CRD}/mysqlbackup'" >&2
 		echo "MySQL backup will be skipped!!" >&2
 	fi
+fi
+
+#------------------------------------------------------------------------------#
+# Check if the 'backupit' program exists. If not, there no way to backup       #
+#------------------------------------------------------------------------------#
+if [[ ! -x "${BCK}" ]]
+then
+	echo "The backup program '${BCK}' cannot be found!" >&2
+	echo "So there is no way to create a backup." >&2
+	echo "The program will be stopped." >&2
+	exit 1
 fi
 
 #------------------------------------------------------------------------------#
