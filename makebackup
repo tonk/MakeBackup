@@ -2,7 +2,7 @@
 #------------------------------------------------------------------------------#
 # vi: set sw=4 ts=4 ai:                            ("set modeline" in ~/.exrc) #
 #------------------------------------------------------------------------------#
-# Program      : make_backup                                                   #
+# Program      : makebackup                                                    #
 #                                                                              #
 # Author       : Ton Kersten                        Groesbeek, The Netherlands #
 #                                                                              #
@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 2 2010-12-03 11:15:57 tonk                               $: #
-# $Revision:: 2                                                             $: #
+# $Id:: makebackup 3 2010-12-06 08:01:32 tonk                               $: #
+# $Revision:: 3                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2010-12-03 11:16:29 +0100 (Fri, 03 Dec 2010)                      $: #
+# $Date:: 2010-12-06 08:01:32 +0100 (Mon, 06 Dec 2010)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -129,8 +129,8 @@ then
 		${CRD}/mysqlbackup
 		echo "$(Now) -> ${IAM} Finished MySQL backup on host '$(hostname)'"
 	else
-		echo "Cannot find MySQL backup tool '${CRD}/mysqlbackup'"
-		echo "MySQL backup will be skipped!!"
+		echo "Cannot find MySQL backup tool '${CRD}/mysqlbackup'" >&2
+		echo "MySQL backup will be skipped!!" >&2
 	fi
 fi
 
