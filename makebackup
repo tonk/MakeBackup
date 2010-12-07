@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 4 2010-12-06 08:47:38 tonk                               $: #
-# $Revision:: 4                                                             $: #
+# $Id:: makebackup 5 2010-12-07 08:04:45 tonk                               $: #
+# $Revision:: 5                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2010-12-06 08:48:49 +0100 (Mon, 06 Dec 2010)                      $: #
+# $Date:: 2010-12-07 08:04:46 +0100 (Tue, 07 Dec 2010)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -221,7 +221,8 @@ in
 		;;
 
 	*)
-		cat /var/log/${IAM}.log | mail -s "Logging of '${IAM}' on $(Now)" ${MAILTO}
+		SUBJ="Logging of '${IAM}' on '$(hostname)' at $(Now)"
+		cat /var/log/${IAM}.log | mail -s "${SUBJ}" ${MAILTO}
 		;;
 esac
 
