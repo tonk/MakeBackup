@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 10 2010-12-08 15:30:29 tonk                              $: #
-# $Revision:: 10                                                            $: #
+# $Id:: makebackup 11 2010-12-09 08:50:20 tonk                              $: #
+# $Revision:: 11                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2010-12-08 15:30:42 +0100 (Wed, 08 Dec 2010)                      $: #
+# $Date:: 2010-12-09 08:50:21 +0100 (Thu, 09 Dec 2010)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -150,12 +150,12 @@ then
 fi
 
 #------------------------------------------------------------------------------#
-# Check if the 'backupit' program exists. If not, there no way to backup       #
+# Check if the 'backupit' program exists. If not, there is no way to backup    #
 #------------------------------------------------------------------------------#
 if [[ ! -x "${BCK}" ]]
 then
 	echo "The backup program '${BCK}' cannot be found!" >&2
-	echo "So there is no way to create a backup." >&2
+	echo "There is no way to create a backup." >&2
 	echo "The program will be stopped." >&2
 	exit 1
 fi
@@ -182,14 +182,21 @@ do
 		done
 
 		#----------------------------------------------------------------------#
+		# Find out the number of cycles to keep                                #
+		#----------------------------------------------------------------------#
+		CYCLES=${CYCL[${CNT}]:-${MAX}}
+
+		#----------------------------------------------------------------------#
 		# Do the backup                                                        #
 		#----------------------------------------------------------------------#
-		echo "$(Now) -> Starting: ${BCK} --max=${MAX} ${SRC} --target=${DST}"
-		${BCK} -v --max=${MAX} ${SRC} --target=${DST}
+		echo "$(Now) -> Starting: ${BCK} --max=${CYCLES} ${SRC} --target=${DST}"
+		${BCK} -v --max=${CYCLES} ${SRC} --target=${DST}
 		RC=${RC}+${?}
 		echo
 		echo
-		echo "Used diskspace in ${DST} : $(du -hs ${DST})"
+		echo "Used diskspace in ${DST}/latest"
+		echo "-----------------------------------------------------------------"
+		echo "	$(du -hs ${DST}/latest/)"
 		echo
 		echo "Free disk space"
 		echo "---------------"
