@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 15 2011-03-09 11:11:08 tonk                              $: #
-# $Revision:: 15                                                            $: #
+# $Id:: makebackup 16 2011-03-09 11:20:31 tonk                              $: #
+# $Revision:: 16                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-09 11:15:01 +0100 (Wed, 09 Mar 2011)                      $: #
+# $Date:: 2011-03-09 11:20:48 +0100 (Wed, 09 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -291,7 +291,7 @@ in
 		;;
 
 	*)
-		SUBJ="Logging of '${IAM}' on '${HOSTNAME}' at $(Now)"
+		SUBJ="Logging of '${IAM}' on '${HOSTNAME}' at $(Now) (RC=${BCKSTATUS})"
 		cat /var/log/${IAM}.log | mail -s "${SUBJ}" ${MAILTO}
 		;;
 esac
