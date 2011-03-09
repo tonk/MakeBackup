@@ -3,4 +3,4 @@ MakeBackup by Ton Kersten
 MakeBackup creates backups of your files the smart way.
 It uses hardlinks to reduce the used diskspace.
 
-$Id: cae1296 2010-10-04 14:36:46 +0200 (Ton Kersten)$
+$Id:: cae1296 2010-10-04 14:36:46 +0200 (Ton Kersten) $:
