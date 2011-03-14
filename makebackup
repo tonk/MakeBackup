@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 21 2011-03-14 11:08:10 tonk                              $: #
-# $Revision:: 21                                                            $: #
+# $Id:: makebackup 22 2011-03-14 11:48:26 tonk                              $: #
+# $Revision:: 22                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 11:17:20 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-14 12:19:59 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -166,14 +166,24 @@ then
 	echo "${d}"
 	echo "Prebackup command output."
 	echo
-	eval ${PREBACKUP}
+	eval ${PREBACKUP} 2>&1 > /tmp/${IAM}_${$}
 	THISRC=${?}
+
+	sed 's/^/    /' /tmp/${IAM}_${$}
+
+	if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
+	then
+		sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} 	| \
+			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
+	fi
+
 	echo
-	echo "Return code for the pre backup command: ${THISRC}"
+	echo "Return code for the prebackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
-	syslog "pre backup command end with returncode ${THISRC}"
+	syslog "Prebackup command ended with returncode ${THISRC}"
+	rm -f /tmp/${IAM}_${$}
 fi
 
 #------------------------------------------------------------------------------#
@@ -209,7 +219,7 @@ then
 
 	syslog "The backup program '${BCK}' cannot be found!"
 	syslog "There is no way to create a backup."
-	syslog "The program will be stopped."
+	syslog "The program will be stopped. (RC=1)"
 	exit 1
 fi
 
@@ -256,7 +266,7 @@ do
 		CYCLES=${CYCL[${CNT}]:-${MAX}}
 
 		#----------------------------------------------------------------------#
-		# Do the backup                                                        #
+		# Start with a summary of what to do                                   #
 		#----------------------------------------------------------------------#
 		set ${SRCTXT}; SRC1="${1}"; shift; SRCR="${@}"
 		set ${EXCTXT}; EXC1="${1}"; shift; EXCR="${@}"
@@ -281,8 +291,11 @@ do
 		echo "    ${s:4}"
 		echo
 		echo
-		syslog "${SHRT[${CNT}]:-} : Starting backup cycle for ${DESC[${CNT}]}"
+		syslog "${SHRT[${CNT}]:-} : Starting backup cycle for '${DESC[${CNT}]}'"
 
+		#----------------------------------------------------------------------#
+		# Do the backup                                                        #
+		#----------------------------------------------------------------------#
 		${BCK}					\
 			${VERBOSE}			\
 			${DEBUG}			\
@@ -292,14 +305,23 @@ do
 			--target=${DST} 2>&1 > /tmp/${IAM}_${$}
 		THISRC=${?}
 
+		#----------------------------------------------------------------------#
+		# Parse the logfile and send it to the standard logging                #
+		#----------------------------------------------------------------------#
 		sed 's/^/    /' /tmp/${IAM}_${$}
-		if [[ ${THISRC} != 0 ]]
+
+		#----------------------------------------------------------------------#
+		# Send the logging to syslog if needed and wanted                      #
+		#----------------------------------------------------------------------#
+		if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
 		then
-			cat /tmp/${IAM}_${$} 					| \
-				sed "s/^/${SHRT[${CNT}]:-} :   /"	| \
+			sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} | \
 				logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 		fi
 
+		#----------------------------------------------------------------------#
+		# Create a nice summary                                                #
+		#----------------------------------------------------------------------#
 		RC=${RC}+${THISRC}
 		CYCLEEND=$(date '+%s')
 		if [[ -e ${DST}/latest/ ]]
@@ -334,12 +356,14 @@ do
 		SUM="${SUM} USED = ${USED} ; "
 		SUM="${SUM} FREE = ${FREE} ; "
 		SUM="${SUM} RUN = ${RUN} ; "
-		syslog "${SHRT[${CNT}]:-} :   Return code     : ${THISRC}"
-		syslog "${SHRT[${CNT}]:-} :   Used disk space : "${USED}
-		syslog "${SHRT[${CNT}]:-} :   Free disk space : "${FREE}
-		syslog "${SHRT[${CNT}]:-} :   Cycle run time  : "${RUN}
+		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
+		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
+		syslog "${SHRT[${CNT}]:-} :   Return code        : ${THISRC}"
+		syslog "${SHRT[${CNT}]:-} :   Used disk space    : "${USED}
+		syslog "${SHRT[${CNT}]:-} :   Free disk space    : "${FREE}
+		syslog "${SHRT[${CNT}]:-} :   Cycle run time     : "${RUN}
 		syslog "${SHRT[${CNT}]:-} : Summary : ${SUM}"
-		syslog "${SHRT[${CNT}]:-} : Finished backup cycle for ${DESC[${CNT}]}"
+		syslog "${SHRT[${CNT}]:-} : Finished backup cycle for '${DESC[${CNT}]}'"
 		rm -f /tmp/${IAM}_${$}
 	done
 	echo
@@ -374,14 +398,23 @@ then
 	echo "${d}"
 	echo "Postbackup command output."
 	echo
-	eval ${POSTBACKUP}
+	eval ${POSTBACKUP} 2>&1 > /tmp/${IAM}_${$}
 	THISRC=${?}
+
+	sed 's/^/    /' /tmp/${IAM}_${$}
+
+	if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
+	then
+		sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} | \
+			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
+	fi
 	echo
-	echo "Return code for the post backup command: ${THISRC}"
+	echo "Return code for the postbackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
-	syslog "pre backup command end with returncode ${THISRC}"
+	syslog "Postbackup command ended with returncode ${THISRC}"
+	rm -f /tmp/${IAM}_${$}
 fi
 
 BCKEND=$(date '+%s')
