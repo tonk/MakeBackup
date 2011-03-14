@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 6 2011-03-14 09:05:52 tonk                                 $: #
-# $Revision:: 6                                                             $: #
+# $Id:: backupit 7 2011-03-14 09:54:41 tonk                                 $: #
+# $Revision:: 7                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 09:19:01 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-14 09:55:05 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -205,12 +205,13 @@ sub do_backup($)
 	my $exclude  = join(" ", @excludes);
 	my @sources  = map {" '$_'"} @SOURCES;
 	my $source   = join(" ", @sources);
-	$source =~ s/^\s+//;
-	$source =~ s/\s+/ /;
+	my $srctxt   = join(" ", @SOURCES);
+	$source      =~ s/^\s+//;
+	$source      =~ s/\s+/ /;
 
 	if ($verbose || $debug)
-	{	print("creating backup for $source\n");
-		print("in $target\n");
+	{	print("creating backup for $srctxt\n");
+		print("    in $target\n");
 	}
 
 	if ($debug)
@@ -240,11 +241,18 @@ sub remove_oldcycles($$)
 	#--------------------------------------------------------------------------#
 	# remove the last cycles                                                   #
 	#--------------------------------------------------------------------------#
-	print("removing old cycles\n") if ($verbose || $debug);
-	while (@$cycles >= $max_cycles)
-	{	my $cycle = shift @$cycles;
-		print("    removing cycle: $cycle\n") if ($verbose || $debug);
-		system("rm -rf '$cycle'");
+	if ( @$cycles >= $max_cycles)
+	{	print("removing old cycles\n") if ($verbose || $debug);
+		while (@$cycles >= $max_cycles)
+		{	my $cycle = shift @$cycles;
+			print("    removing cycle: $cycle\n") if ($verbose || $debug);
+			system("rm -rf '$cycle'");
+		}
+	}
+	else
+	{	print("\nno old cycles to remove:\n");
+		print("    current number of cycles : " . scalar @$cycles + 1 . "\n");
+		print("    maximum number of cycles : $max_cycles\n");
 	}
 }
 
