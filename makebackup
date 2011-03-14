@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 20 2011-03-14 09:36:11 tonk                              $: #
-# $Revision:: 20                                                            $: #
+# $Id:: makebackup 21 2011-03-14 11:08:10 tonk                              $: #
+# $Revision:: 21                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 09:55:03 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-14 11:17:20 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -77,6 +77,22 @@ hms()
 	echo "${1}" | awk '{ print strftime("%H:%M:%S", $1, 1) }'
 }
 
+#------------------------------------------------------------------------------#
+# Send a line to syslog (if $1 = '-f' the line is forecd to syslog)            #
+#------------------------------------------------------------------------------#
+syslog()
+{	if [[ x"${1:-}" = x"-f" ]]
+	then
+		shift
+		echo "${*:-}" | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
+		return
+	fi
+
+	if [[ x"${SYSLOG:-0}" = x"1" ]]
+	then
+		echo "${*:-}" | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
+	fi
+}
 
 #------------------------------------------------------------------------------#
 # Start the logging                                                            #
@@ -115,6 +131,7 @@ echo "     System backup at ${HOSTNAME} ended BACKUPSTATUS"
 echo
 echo "${d}"
 echo
+syslog -f "Starting ${IAM}"
 
 #------------------------------------------------------------------------------#
 # Read the config file                                                         #
@@ -123,11 +140,13 @@ CONFIGFILE="${1:-${CRD}/${IAM}.conf}"
 if [[ -r "${CONFIGFILE}" ]]
 then
 	. "${CONFIGFILE}" || {
-		echo "Error processing config '${CONFIGFILE}'!" >&2
+		echo "Error processing config '${CONFIGFILE}'!"
+		syslog -f "Error processing config '${CONFIGFILE}'!"
 		exit 1
 	}
 else
 	echo "Could not find config '${CONFIGFILE}'!" >&2
+	syslog -f "Could not find config '${CONFIGFILE}'!"
 	exit 1
 fi
 
@@ -143,6 +162,7 @@ fi
 #------------------------------------------------------------------------------#
 if [[ x"${PREBACKUP:-}" != x"" ]]
 then
+	syslog "Starting pre backup command"
 	echo "${d}"
 	echo "Prebackup command output."
 	echo
@@ -153,6 +173,7 @@ then
 	echo
 	echo "${d}"
 	echo
+	syslog "pre backup command end with returncode ${THISRC}"
 fi
 
 #------------------------------------------------------------------------------#
@@ -160,15 +181,21 @@ fi
 #------------------------------------------------------------------------------#
 if [[ x"${BACKUPMYSQL:-yes}" = x"yes" ]]
 then
+	syslog "Starting MyQL backup"
 	if [[ -x ${CRD}/mysqlbackup ]]
 	then
 		echo "$(Now) -> ${IAM} Starting MySQL backup on host '$(hostname)'"
+		syslog "Starting MySQL backup on host '$(hostname)'"
 		${CRD}/mysqlbackup
 		echo "$(Now) -> ${IAM} Finished MySQL backup on host '$(hostname)'"
+		syslog "Finished MySQL backup on host '$(hostname)'"
 	else
 		echo "Cannot find MySQL backup tool '${CRD}/mysqlbackup'" >&2
 		echo "MySQL backup will be skipped!!" >&2
+		syslog "Cannot find MySQL backup tool '${CRD}/mysqlbackup'"
+		syslog "MySQL backup will be skipped!!"
 	fi
+	syslog "Finished MyQL backup"
 fi
 
 #------------------------------------------------------------------------------#
@@ -179,6 +206,10 @@ then
 	echo "The backup program '${BCK}' cannot be found!" >&2
 	echo "There is no way to create a backup." >&2
 	echo "The program will be stopped." >&2
+
+	syslog "The backup program '${BCK}' cannot be found!"
+	syslog "There is no way to create a backup."
+	syslog "The program will be stopped."
 	exit 1
 fi
 
@@ -250,6 +281,7 @@ do
 		echo "    ${s:4}"
 		echo
 		echo
+		syslog "${SHRT[${CNT}]:-} : Starting backup cycle for ${DESC[${CNT}]}"
 
 		${BCK}					\
 			${VERBOSE}			\
@@ -257,9 +289,17 @@ do
 			${SRC}				\
 			${EXC}				\
 			--max=${CYCLES}		\
-			--target=${DST} 2>&1 | sed 's/^/    /'
-
+			--target=${DST} 2>&1 > /tmp/${IAM}_${$}
 		THISRC=${?}
+
+		sed 's/^/    /' /tmp/${IAM}_${$}
+		if [[ ${THISRC} != 0 ]]
+		then
+			cat /tmp/${IAM}_${$} 					| \
+				sed "s/^/${SHRT[${CNT}]:-} :   /"	| \
+				logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
+		fi
+
 		RC=${RC}+${THISRC}
 		CYCLEEND=$(date '+%s')
 		if [[ -e ${DST}/latest/ ]]
@@ -276,6 +316,7 @@ do
 			FREE="Unknown"
 		fi
 
+		RUN=$(hms $(( ${CYCLEEND} - ${CYCLESTART} )) )
 		echo
 		echo
 		echo "     Cycle statistics"
@@ -284,10 +325,22 @@ do
 		echo "        Used disk space   : "${USED}
 		echo "        Free disk space   : "${FREE}
 		echo "        Cycle end time    : "$(Now)
-		echo "        Cycle run time    : "$(hms $(( ${CYCLEEND} - ${CYCLESTART} )) )
+		echo "        Cycle run time    : "${RUN}
 		echo "    ${s:4}"
 		echo
 		echo
+		SUM=""
+		SUM="${SUM} RC = ${THISRC} ; "
+		SUM="${SUM} USED = ${USED} ; "
+		SUM="${SUM} FREE = ${FREE} ; "
+		SUM="${SUM} RUN = ${RUN} ; "
+		syslog "${SHRT[${CNT}]:-} :   Return code     : ${THISRC}"
+		syslog "${SHRT[${CNT}]:-} :   Used disk space : "${USED}
+		syslog "${SHRT[${CNT}]:-} :   Free disk space : "${FREE}
+		syslog "${SHRT[${CNT}]:-} :   Cycle run time  : "${RUN}
+		syslog "${SHRT[${CNT}]:-} : Summary : ${SUM}"
+		syslog "${SHRT[${CNT}]:-} : Finished backup cycle for ${DESC[${CNT}]}"
+		rm -f /tmp/${IAM}_${$}
 	done
 	echo
 	echo "${d}"
@@ -317,6 +370,7 @@ fi
 #------------------------------------------------------------------------------#
 if [[ x"${POSTBACKUP:-}" != x"" ]]
 then
+	syslog "Starting pre backup command"
 	echo "${d}"
 	echo "Postbackup command output."
 	echo
@@ -327,12 +381,17 @@ then
 	echo
 	echo "${d}"
 	echo
+	syslog "pre backup command end with returncode ${THISRC}"
 fi
 
 BCKEND=$(date '+%s')
+RUN=$(hms $(( ${BCKEND} - ${BCKSTART} )) )
 echo
-echo "Total run time : "$(hms $(( ${BCKEND} - ${BCKSTART} )) )
+echo "Total run time : "${RUN}
 echo "${d}"
+syslog "Total run time: "${RUN}
+syslog "Ended on '${HOSTNAME}' (RC=${BCKSTATUS})"
+syslog "Ending ${IAM}"
 
 #------------------------------------------------------------------------------#
 # Clear the log redirection and insert the program status into the log         #
@@ -358,7 +417,7 @@ in
 		#----------------------------------------------------------------------#
 		# Send the logging to syslog                                           #
 		#----------------------------------------------------------------------#
-		cat /var/log/${IAM}.log | logger -t "${IAM}" -p local4.info
+		cat /var/log/${IAM}.log | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 		;;
 
 	*)
