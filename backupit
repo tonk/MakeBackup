@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 7 2011-03-14 09:54:41 tonk                                 $: #
-# $Revision:: 7                                                             $: #
+# $Id:: backupit 8 2011-03-14 13:05:34 tonk                                 $: #
+# $Revision:: 8                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 09:55:05 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-14 13:05:42 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -242,7 +242,7 @@ sub remove_oldcycles($$)
 	# remove the last cycles                                                   #
 	#--------------------------------------------------------------------------#
 	if ( @$cycles >= $max_cycles)
-	{	print("removing old cycles\n") if ($verbose || $debug);
+	{	print("\nremoving old cycles\n") if ($verbose || $debug);
 		while (@$cycles >= $max_cycles)
 		{	my $cycle = shift @$cycles;
 			print("    removing cycle: $cycle\n") if ($verbose || $debug);
