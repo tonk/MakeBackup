@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 18 2011-03-14 08:39:23 tonk                              $: #
-# $Revision:: 18                                                            $: #
+# $Id:: makebackup 19 2011-03-14 09:15:33 tonk                              $: #
+# $Revision:: 19                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 08:42:22 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-14 09:18:57 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -70,18 +70,11 @@ Now()
 }
 
 #------------------------------------------------------------------------------#
-# Calculate h:m:s from seconds                                                 #
+# Calculate h:m:s from seconds (use awk to make live easier)                   #
 #------------------------------------------------------------------------------#
 hms()
 {
-	s="${1}"
-
-	h=$(( ${s} / 3600 ))
-	s=$(( ${s} - ( ${h} * 3600) ))
-	m=$(( ${s} / 60))
-	s=$(( ${s} -( ${m} * 60 ) ))
-
-	printf "%d:%02d:%02d" ${h} ${m} ${s}
+	echo "${1}" | awk '{ print strftime("%H:%M:%S", $1, 1) }'
 }
 
 
@@ -139,6 +132,13 @@ else
 fi
 
 #------------------------------------------------------------------------------#
+# Set verbose and debug                                                        #
+#------------------------------------------------------------------------------#
+[[ "${VERBOSE:-0}" = "1" ]] && VERBOSE="-v" || VERBOSE=""
+[[ "${DEBUG:-0}"   = "1" ]] && DEBUG="-d"   || DEBUG=""
+[[ "${DEBUG:-0}"  != ""  ]] && set -x
+
+#------------------------------------------------------------------------------#
 # Run a command before we begin                                                #
 #------------------------------------------------------------------------------#
 if [[ x"${PREBACKUP:-}" != x"" ]]
@@ -187,9 +187,6 @@ fi
 #------------------------------------------------------------------------------#
 for CNT in $(seq 1 ${BCKS})
 do
-	echo "    $(Now) -> ${DESC[${CNT}]}"
-	echo
-	echo "${s}"
 	for DST in ${DSTS[${CNT}]}
 	do
 		CYCLESTART=$(date '+%s')
@@ -232,18 +229,26 @@ do
 		#----------------------------------------------------------------------#
 		echo
 		echo
-		echo "     Starting cycle"
+		echo "     Starting backup cycle"
 		echo "    ${s:4}"
 		echo "        Description       : "$(echo ${DESC[${CNT}]})
 		echo "        Sources           : "$(echo ${SRCTXT} | sed "s/'//g")
 		echo "        Excludes          : "$(echo ${EXCTXT} | sed "s/'//g")
 		echo "        Destination       : "$(echo ${DST}    | sed "s/'//g")
 		echo "        Number of cycles  : "$(echo ${MAX})
+		echo "        Cycle start time  : "$(Now)
 		echo "    ${s:4}"
 		echo
 		echo
 
-		${BCK} -v --max=${CYCLES} ${SRC} ${EXC} --target=${DST} 2>&1 | sed 's/^/    /'
+		${BCK}					\
+			${VERBOSE}			\
+			${DEBUG}			\
+			${SRC}				\
+			${EXC}				\
+			--max=${CYCLES}		\
+			--target=${DST} 2>&1 | sed 's/^/    /'
+
 		THISRC=${?}
 		RC=${RC}+${THISRC}
 		CYCLEEND=$(date '+%s')
@@ -268,6 +273,7 @@ do
 		echo "        Return code       : "${THISRC}
 		echo "        Used disk space   : "${USED}
 		echo "        Free disk space   : "${FREE}
+		echo "        Cycle end time    : "$(Now)
 		echo "        Cycle run time    : "$(hms $(( ${CYCLEEND} - ${CYCLESTART} )) )
 		echo "    ${s:4}"
 		echo
