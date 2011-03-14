@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 17 2011-03-10 07:34:33 tonk                              $: #
-# $Revision:: 17                                                            $: #
+# $Id:: makebackup 18 2011-03-14 08:39:23 tonk                              $: #
+# $Revision:: 18                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-10 07:34:40 +0100 (Thu, 10 Mar 2011)                      $: #
+# $Date:: 2011-03-14 08:42:22 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -70,6 +70,22 @@ Now()
 }
 
 #------------------------------------------------------------------------------#
+# Calculate h:m:s from seconds                                                 #
+#------------------------------------------------------------------------------#
+hms()
+{
+	s="${1}"
+
+	h=$(( ${s} / 3600 ))
+	s=$(( ${s} - ( ${h} * 3600) ))
+	m=$(( ${s} / 60))
+	s=$(( ${s} -( ${m} * 60 ) ))
+
+	printf "%d:%02d:%02d" ${h} ${m} ${s}
+}
+
+
+#------------------------------------------------------------------------------#
 # Start the logging                                                            #
 #------------------------------------------------------------------------------#
 exec > /var/log/${IAM}.log
@@ -95,7 +111,10 @@ typeset -i BCKS=0
 #------------------------------------------------------------------------------#
 # Announce the start of the program                                            #
 #------------------------------------------------------------------------------#
-echo "$(Now) -> ${IAM} Starting"
+BCKSTART=$(date '+%s')
+echo "${d}"
+echo
+echo "$(Now) -> Starting ${IAM}"
 echo
 echo "${d}"
 echo
@@ -168,11 +187,13 @@ fi
 #------------------------------------------------------------------------------#
 for CNT in $(seq 1 ${BCKS})
 do
+	echo "    $(Now) -> ${DESC[${CNT}]}"
 	echo
-	echo "$(Now) -> ${DESC[${CNT}]}"
-	echo
+	echo "${s}"
 	for DST in ${DSTS[${CNT}]}
 	do
+		CYCLESTART=$(date '+%s')
+
 		[[ ! -d ${DST} ]] &&
 		{	mkdir -p ${DST}
 			chmod 700 ${DST}
@@ -182,19 +203,24 @@ do
 		# Create the backup source string                                      #
 		#----------------------------------------------------------------------#
 		SRC=""
+		SRCTXT=""
 		for dir in ${DIRS[${CNT}]}
 		do
 			SRC="${SRC} --source='${dir}'"
+			SRCTXT="${SRCTXT} ${dir}'"
 		done
 
 		#----------------------------------------------------------------------#
 		# Create the backup exclude string (may be empty)                      #
 		#----------------------------------------------------------------------#
 		EXC=""
+		EXCTXT=""
 		for exc in ${EXCL[${CNT}]:-}
 		do
 			EXC="${EXC} --exclude='${exc}'"
+			EXCTXT="${EXCTXT}='${exc}'"
 		done
+		[[ x"${EXCTXT}" = x"" ]] && EXCTXT="None"
 
 		#----------------------------------------------------------------------#
 		# Find out the number of cycles to keep                                #
@@ -204,23 +230,47 @@ do
 		#----------------------------------------------------------------------#
 		# Do the backup                                                        #
 		#----------------------------------------------------------------------#
-		echo "$(Now) -> Starting: ${BCK} --max=${CYCLES} ${SRC} ${EXC} --target=${DST}"
-		${BCK} -v --max=${CYCLES} ${SRC} ${EXC} --target=${DST}
+		echo
+		echo
+		echo "     Starting cycle"
+		echo "    ${s:4}"
+		echo "        Description       : "$(echo ${DESC[${CNT}]})
+		echo "        Sources           : "$(echo ${SRCTXT} | sed "s/'//g")
+		echo "        Excludes          : "$(echo ${EXCTXT} | sed "s/'//g")
+		echo "        Destination       : "$(echo ${DST}    | sed "s/'//g")
+		echo "        Number of cycles  : "$(echo ${MAX})
+		echo "    ${s:4}"
+		echo
+		echo
+
+		${BCK} -v --max=${CYCLES} ${SRC} ${EXC} --target=${DST} 2>&1 | sed 's/^/    /'
 		THISRC=${?}
 		RC=${RC}+${THISRC}
+		CYCLEEND=$(date '+%s')
+		if [[ -e ${DST}/latest/ ]]
+		then
+			USED="$(du -hs ${DST}/latest/ 2>/dev/null | awk '{ print $1 " (" $2 ")" }')"
+		else
+			USED="Unknown"
+		fi
+
+		if [[ -e ${DST} ]]
+		then
+			FREE="$(df -hP ${DST} 2>/dev/null | awk ' !/^F/ { print $4 }')"
+		else
+			FREE="Unknown"
+		fi
+
 		echo
 		echo
-		echo "Return code for this backup cycle: ${THISRC}"
+		echo "     Cycle statistics"
+		echo "    ${s:4}"
+		echo "        Return code       : "${THISRC}
+		echo "        Used disk space   : "${USED}
+		echo "        Free disk space   : "${FREE}
+		echo "        Cycle run time    : "$(hms $(( ${CYCLEEND} - ${CYCLESTART} )) )
+		echo "    ${s:4}"
 		echo
-		echo "Used diskspace in ${DST}/latest"
-		echo "-----------------------------------------------------------------"
-		echo "	$(du -hs ${DST}/latest/)"
-		echo
-		echo "Free disk space"
-		echo "---------------"
-		df -hP "${DST}"
-		echo
-		echo "${s}"
 		echo
 	done
 	echo
@@ -262,6 +312,11 @@ then
 	echo "${d}"
 	echo
 fi
+
+BCKEND=$(date '+%s')
+echo
+echo "Total run time : "$(hms $(( ${BCKEND} - ${BCKSTART} )) )
+echo "${d}"
 
 #------------------------------------------------------------------------------#
 # Clear the log redirection and insert the program status into the log         #
