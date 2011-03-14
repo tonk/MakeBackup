@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 19 2011-03-14 09:15:33 tonk                              $: #
-# $Revision:: 19                                                            $: #
+# $Id:: makebackup 20 2011-03-14 09:36:11 tonk                              $: #
+# $Revision:: 20                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 09:18:57 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-14 09:55:03 +0100 (Mon, 14 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -136,7 +136,7 @@ fi
 #------------------------------------------------------------------------------#
 [[ "${VERBOSE:-0}" = "1" ]] && VERBOSE="-v" || VERBOSE=""
 [[ "${DEBUG:-0}"   = "1" ]] && DEBUG="-d"   || DEBUG=""
-[[ "${DEBUG:-0}"  != ""  ]] && set -x
+[[ x"${DEBUG}"    != x"" ]] && set -x
 
 #------------------------------------------------------------------------------#
 # Run a command before we begin                                                #
@@ -204,7 +204,7 @@ do
 		for dir in ${DIRS[${CNT}]}
 		do
 			SRC="${SRC} --source='${dir}'"
-			SRCTXT="${SRCTXT} ${dir}'"
+			SRCTXT="${SRCTXT} ${dir}"
 		done
 
 		#----------------------------------------------------------------------#
@@ -215,7 +215,7 @@ do
 		for exc in ${EXCL[${CNT}]:-}
 		do
 			EXC="${EXC} --exclude='${exc}'"
-			EXCTXT="${EXCTXT}='${exc}'"
+			EXCTXT="${EXCTXT}=${exc}"
 		done
 		[[ x"${EXCTXT}" = x"" ]] && EXCTXT="None"
 
@@ -227,15 +227,25 @@ do
 		#----------------------------------------------------------------------#
 		# Do the backup                                                        #
 		#----------------------------------------------------------------------#
+		set ${SRCTXT}; SRC1="${1}"; shift; SRCR="${@}"
+		set ${EXCTXT}; EXC1="${1}"; shift; EXCR="${@}"
 		echo
 		echo
 		echo "     Starting backup cycle"
 		echo "    ${s:4}"
 		echo "        Description       : "$(echo ${DESC[${CNT}]})
-		echo "        Sources           : "$(echo ${SRCTXT} | sed "s/'//g")
-		echo "        Excludes          : "$(echo ${EXCTXT} | sed "s/'//g")
-		echo "        Destination       : "$(echo ${DST}    | sed "s/'//g")
-		echo "        Number of cycles  : "$(echo ${MAX})
+		echo "        Sources           : "${SRC1}
+		for f in ${SRCR}
+		do
+			echo "                            "${f}
+		done
+		echo "        Excludes          : "${EXC1}
+		for f in ${EXCR}
+		do
+			echo "                            "${f}
+		done
+		echo "        Destination       : "${DST}
+		echo "        Number of cycles  : "${MAX}
 		echo "        Cycle start time  : "$(Now)
 		echo "    ${s:4}"
 		echo
