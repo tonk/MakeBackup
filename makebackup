@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 28 2011-03-16 14:24:12 tonk                              $: #
-# $Revision:: 28                                                            $: #
+# $Id:: makebackup 29 2011-03-16 14:32:45 tonk                              $: #
+# $Revision:: 29                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-16 14:24:19 +0100 (Wed, 16 Mar 2011)                      $: #
+# $Date:: 2011-03-16 14:34:57 +0100 (Wed, 16 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -107,7 +107,7 @@ syslog()
 CONFIGFILE="${1:-${CRD}/${IAM}.conf}"
 if [[ -r ${CONFIGFILE} ]]
 then
-	LOGFILE="/var/log/${IAM}-$(basename ${CONFIGFILE} .conf).log"
+	LOGFILE="/var/log/${IAM}-$(basename ${CONFIGFILE} | sed 's!\.conf.*$!!').log"
 else
 	LOGFILE="/var/log/${IAM}.log"
 fi
