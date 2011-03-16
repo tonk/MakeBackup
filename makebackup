@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 27 2011-03-16 13:07:12 tonk                              $: #
-# $Revision:: 27                                                            $: #
+# $Id:: makebackup 28 2011-03-16 14:24:12 tonk                              $: #
+# $Revision:: 28                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-16 13:33:42 +0100 (Wed, 16 Mar 2011)                      $: #
+# $Date:: 2011-03-16 14:24:19 +0100 (Wed, 16 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -102,16 +102,26 @@ syslog()
 }
 
 #------------------------------------------------------------------------------#
+# Check the configfile                                                         #
+#------------------------------------------------------------------------------#
+CONFIGFILE="${1:-${CRD}/${IAM}.conf}"
+if [[ -r ${CONFIGFILE} ]]
+then
+	LOGFILE="/var/log/${IAM}-$(basename ${CONFIGFILE} .conf).log"
+else
+	LOGFILE="/var/log/${IAM}.log"
+fi
+
+#------------------------------------------------------------------------------#
 # Start the logging                                                            #
 #------------------------------------------------------------------------------#
-exec > /var/log/${IAM}.log
+exec > ${LOGFILE}
 exec 2>&1
 
 #------------------------------------------------------------------------------#
 # Define constants                                                             #
 #------------------------------------------------------------------------------#
 VER="1.$(awk '/^# \$Revision::/ { print $3 }' ${0})"
-CONFIGFILE="${CRD}/${IAM}.conf"
 PATH="${PATH}:/bin:/sbin"
 PATH="${PATH}:/usr/bin:/usr/sbin"
 PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
@@ -130,7 +140,7 @@ typeset -i BCKS=0
 BCKSTART=$(date '+%s')
 echo "${d}"
 echo
-echo "$(Now) -> Starting ${IAM}"
+echo "$(Now) -> Starting ${IAM} version ${VER}"
 echo
 echo "${d}"
 echo
@@ -143,7 +153,6 @@ syslog -f "Starting ${IAM}"
 #------------------------------------------------------------------------------#
 # Read the config file                                                         #
 #------------------------------------------------------------------------------#
-CONFIGFILE="${1:-${CRD}/${IAM}.conf}"
 if [[ -r "${CONFIGFILE}" ]]
 then
 	. "${CONFIGFILE}" || {
@@ -376,10 +385,10 @@ do
 		echo
 		echo
 		SUM=""
-		SUM="${SUM} RC = ${THISRC} ; "
-		SUM="${SUM} USED = ${USED} ; "
-		SUM="${SUM} FREE = ${FREE} ; "
-		SUM="${SUM} RUN = ${RUN} ; "
+		SUM="${SUM} RC = ${THISRC} ;"
+		SUM="${SUM} USED = ${USED} ;"
+		SUM="${SUM} FREE = ${FREE} ;"
+		SUM="${SUM} RUN = ${RUN} ;"
 		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
 		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
 		syslog "${SHRT[${CNT}]:-} :   Return code        : ${THISRC}"
@@ -455,8 +464,8 @@ syslog "Ending ${IAM}"
 #------------------------------------------------------------------------------#
 exec 1>&-
 exec 2>&-
-sed -i.bck "s/BACKUPSTATUS/${BCKSTATUS}/" /var/log/${IAM}.log
-rm /var/log/${IAM}.log.bck
+sed -i.bck "s/BACKUPSTATUS/${BCKSTATUS}/" ${LOGFILE}
+rm ${LOGFILE}.bck
 
 #------------------------------------------------------------------------------#
 # Mail the logging if requested                                                #
@@ -467,19 +476,19 @@ in
 		#----------------------------------------------------------------------#
 		# Send the logging to syslog                                           #
 		#----------------------------------------------------------------------#
-		cat /var/log/${IAM}.log
+		cat ${LOGFILE}
 		;;
 
 	syslog)
 		#----------------------------------------------------------------------#
 		# Send the logging to syslog                                           #
 		#----------------------------------------------------------------------#
-		cat /var/log/${IAM}.log | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
+		cat ${LOGFILE} | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 		;;
 
 	*)
 		SUBJ="Logging of '${IAM}' on '${HOSTNAME}' at $(Now) (RC=${BCKSTATUS})"
-		cat /var/log/${IAM}.log | mail -s "${SUBJ}" ${MAILTO}
+		cat ${LOGFILE} | mail -s "${SUBJ}" ${MAILTO}
 		;;
 esac
 
