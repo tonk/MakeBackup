@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 8 2011-03-14 13:05:34 tonk                                 $: #
-# $Revision:: 8                                                             $: #
+# $Id:: backupit 9 2011-03-17 07:53:35 tonk                                 $: #
+# $Revision:: 9                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-14 13:05:42 +0100 (Mon, 14 Mar 2011)                      $: #
+# $Date:: 2011-03-17 08:03:22 +0100 (Thu, 17 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -210,8 +210,12 @@ sub do_backup($)
 	$source      =~ s/\s+/ /;
 
 	if ($verbose || $debug)
-	{	print("creating backup for $srctxt\n");
-		print("    in $target\n");
+	{	print("creating backup for:\n");
+		foreach (@SOURCES)
+		{	s/\'//g;
+			print "    $_\n";
+		}
+		print("in $target\n");
 	}
 
 	if ($debug)
