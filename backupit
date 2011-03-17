@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 9 2011-03-17 07:53:35 tonk                                 $: #
-# $Revision:: 9                                                             $: #
+# $Id:: backupit 10 2011-03-17 10:17:16 tonk                                $: #
+# $Revision:: 10                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-17 08:03:22 +0100 (Thu, 17 Mar 2011)                      $: #
+# $Date:: 2011-03-17 10:17:17 +0100 (Thu, 17 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -219,13 +219,13 @@ sub do_backup($)
 	}
 
 	if ($debug)
-	{	print("rsync -aRqvx --delete -e ssh $exclude $source '$target'\n");
+	{	print("rsync -aRqx --delete -e ssh $exclude $source '$target'\n");
 		$devnull="";
 	}
 	else
 	{	$devnull=">/dev/null 2>&1";
 	}
-	$ret = system("rsync -aRqvx --delete -e ssh $exclude $source '$target' $devnull");
+	$ret = system("rsync -aRqx --delete -e ssh $exclude $source '$target' $devnull");
 	print("command ended with returncode $ret\n") if ($ret != 0);
 
 	if ($ret != 0)
