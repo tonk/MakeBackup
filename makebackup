@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 30 2011-03-17 07:41:26 tonk                              $: #
-# $Revision:: 30                                                            $: #
+# $Id:: makebackup 31 2011-03-29 07:47:57 tonk                              $: #
+# $Revision:: 31                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-17 07:41:33 +0100 (Thu, 17 Mar 2011)                      $: #
+# $Date:: 2011-03-29 08:02:24 +0200 (Tue, 29 Mar 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -138,6 +138,7 @@ typeset -i BCKS=0
 # Announce the start of the program                                            #
 #------------------------------------------------------------------------------#
 BCKSTART=$(date '+%s')
+BCKSTARTTIME=$(Now)
 echo "${d}"
 echo
 echo "$(Now) -> Starting ${IAM} version ${VER}"
@@ -264,6 +265,7 @@ do
 	for DST in ${DSTS[${CNT}]}
 	do
 		CYCLESTART=$(date '+%s')
+		CYCLESTARTTIME=$(Now)
 
 		[[ ! -d ${DST} ]] &&
 		{	mkdir -p ${DST}
@@ -289,7 +291,7 @@ do
 		for exc in ${EXCL[${CNT}]:-}
 		do
 			EXC="${EXC} --exclude='${exc}'"
-			EXCTXT="${EXCTXT}=${exc}"
+			EXCTXT="${EXCTXT} ${exc}"
 		done
 		[[ x"${EXCTXT}" = x"" ]] && EXCTXT="None"
 
@@ -357,6 +359,7 @@ do
 		#----------------------------------------------------------------------#
 		RC=${RC}+${THISRC}
 		CYCLEEND=$(date '+%s')
+		CYCLEENDTIME=$(Now)
 		if [[ -e ${DST}/latest/ ]]
 		then
 			USED="$(du -hs ${DST}/latest/ 2>/dev/null | awk '{ print $1 " (" $2 ")" }')"
@@ -385,10 +388,12 @@ do
 		echo
 		echo
 		SUM=""
-		SUM="${SUM} RC = ${THISRC} ;"
-		SUM="${SUM} USED = ${USED} ;"
-		SUM="${SUM} FREE = ${FREE} ;"
-		SUM="${SUM} RUN = ${RUN} ;"
+		SUM="${SUM} START=${CYCLESTARTTIME};"
+		SUM="${SUM} END=${CYCLEENDTIME};"
+		SUM="${SUM} RUN=${RUN};"
+		SUM="${SUM} RC=${THISRC};"
+		SUM="${SUM} USED=${USED};"
+		SUM="${SUM} FREE=${FREE};"
 		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
 		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
 		syslog "${SHRT[${CNT}]:-} :   Return code        : ${THISRC}"
@@ -451,12 +456,20 @@ then
 fi
 
 BCKEND=$(date '+%s')
+BCKENDTIME=$(Now)
 RUN=$(hms $(( ${BCKEND} - ${BCKSTART} )) )
+SUM=""
+SUM="${SUM} START=${BCKSTARTTIME};"
+SUM="${SUM} END=${BCKENDTIME};"
+SUM="${SUM} RUN=${RUN};"
+SUM="${SUM} RC=${RC};"
+SUM="${SUM} STATUS=${BCKSTATUS};"
 echo
 echo "Total run time : "${RUN}
 echo "${d}"
 syslog "Total run time: "${RUN}
 syslog "Ended on '${HOSTNAME}' (RC=${BCKSTATUS})"
+syslog "Summary : ${SUM}"
 syslog "Ending ${IAM}"
 
 #------------------------------------------------------------------------------#
