@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 31 2011-03-29 07:47:57 tonk                              $: #
-# $Revision:: 31                                                            $: #
+# $Id:: makebackup 32 2011-05-24 09:08:57 tonk                              $: #
+# $Revision:: 32                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-29 08:02:24 +0200 (Tue, 29 Mar 2011)                      $: #
+# $Date:: 2011-05-24 09:13:28 +0200 (Tue, 24 May 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -85,7 +85,7 @@ hms()
 }
 
 #------------------------------------------------------------------------------#
-# Send a line to syslog (if $1 = '-f' the line is forecd to syslog)            #
+# Send a line to syslog (if $1 = '-f' the line is forced to syslog)            #
 #------------------------------------------------------------------------------#
 syslog()
 {	if [[ x"${1:-}" = x"-f" ]]
@@ -119,7 +119,7 @@ exec > ${LOGFILE}
 exec 2>&1
 
 #------------------------------------------------------------------------------#
-# Define constants                                                             #
+# Define constants and variables                                               #
 #------------------------------------------------------------------------------#
 VER="1.$(awk '/^# \$Revision::/ { print $3 }' ${0})"
 PATH="${PATH}:/bin:/sbin"
@@ -177,6 +177,7 @@ fi
 #------------------------------------------------------------------------------#
 # Set defaults for unset stuff                                                 #
 #------------------------------------------------------------------------------#
+FAILS=0
 MAX="${MAX:-99}"
 BACKUPMYSQL="${BACKUPMYSQL:-no}"
 SYSLOG="${SYSLOG:-1}"
@@ -355,6 +356,13 @@ do
 		fi
 
 		#----------------------------------------------------------------------#
+		# And, if things fail, increase the failure number                     #
+		#----------------------------------------------------------------------#
+		FAILS=$(( ${FAILS} + 1 ))
+		FAILHOST[${FAILS}]="${SHRT[${CNT}]:-}"
+		FAILRC[${FAILS}]="${THISRC}"
+
+		#----------------------------------------------------------------------#
 		# Create a nice summary                                                #
 		#----------------------------------------------------------------------#
 		RC=${RC}+${THISRC}
@@ -455,6 +463,9 @@ then
 	rm -f /tmp/${IAM}_${$}
 fi
 
+#------------------------------------------------------------------------------#
+# Log and display the summary                                                  #
+#------------------------------------------------------------------------------#
 BCKEND=$(date '+%s')
 BCKENDTIME=$(Now)
 RUN=$(hms $(( ${BCKEND} - ${BCKSTART} )) )
@@ -467,10 +478,30 @@ SUM="${SUM} STATUS=${BCKSTATUS};"
 echo
 echo "Total run time : "${RUN}
 echo "${d}"
+
 syslog "Total run time: "${RUN}
 syslog "Ended on '${HOSTNAME}' (RC=${BCKSTATUS})"
 syslog "Summary : ${SUM}"
 syslog "Ending ${IAM}"
+
+#------------------------------------------------------------------------------#
+# And, if things failed, show that as well                                     #
+#------------------------------------------------------------------------------#
+if [[ ${FAILS} != 0 ]]
+then
+	typeset -i i=0
+	echo
+	echo "Failed backups"
+	echo "${d}"
+	syslog "Failed backups:"
+	while [[ ${i} < ${FAILS} ]]
+	do
+		i=$(( ${i} + 1 ))
+		echo "    RC=${FAILRC[${i}]} for host ${FAILHOST[${i}]}"
+		syslog "    RC=${FAILRC[${i}]} for host ${FAILHOST[${i}]}"
+	done
+	echo "${d}"
+fi
 
 #------------------------------------------------------------------------------#
 # Clear the log redirection and insert the program status into the log         #
