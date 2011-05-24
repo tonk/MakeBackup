@@ -358,9 +358,12 @@ do
 		#----------------------------------------------------------------------#
 		# And, if things fail, increase the failure number                     #
 		#----------------------------------------------------------------------#
-		FAILS=$(( ${FAILS} + 1 ))
-		FAILHOST[${FAILS}]="${SHRT[${CNT}]:-}"
-		FAILRC[${FAILS}]="${THISRC}"
+		if [[ ( ${THISRC} != 0 ) ]]
+		then
+			FAILS=$(( ${FAILS} + 1 ))
+			FAILHOST[${FAILS}]="${SHRT[${CNT}]:-}"
+			FAILRC[${FAILS}]="${THISRC}"
+		fi
 
 		#----------------------------------------------------------------------#
 		# Create a nice summary                                                #
