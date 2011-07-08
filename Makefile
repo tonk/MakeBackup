@@ -5,10 +5,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: Makefile 3 2011-03-15 09:44:43 tonk                                 $: #
-# $Revision:: 3                                                             $: #
+# $Id:: Makefile 4 2011-07-08 12:59:30 tonk                                 $: #
+# $Revision:: 4                                                             $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-15 09:44:48 +0100 (Tue, 15 Mar 2011)                      $: #
+# $Date:: 2011-07-08 13:01:55 +0200 (Fri, 08 Jul 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -19,7 +19,7 @@ install:
 	install -p -m 644 makebackup.conf	/home/tonk/bin
 	install -p -m 644 backupit			/home/tonk/bin
 	#
-	install -p -m 644 makebackup		/data/vhosts/blog/html/files/makebackup
-	install -p -m 644 makebackup.conf	/data/vhosts/blog/html/files/makebackup
-	install -p -m 644 backupit			/data/vhosts/blog/html/files/makebackup
-	install -p -m 644 README  			/data/vhosts/blog/html/files/makebackup
+	install -p -m 644 makebackup		/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 makebackup.conf	/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 backupit			/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 README  			/data/vhosts/tonkersten/html/files/makebackup
