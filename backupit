@@ -229,7 +229,7 @@ sub do_backup($)
 	print("command ended with returncode $ret\n") if ($ret != 0);
 
 	if ($ret != 0)
-	{	print("backup failed with return code $ret\n");
+	{	print("backup failed with returncode $ret\n");
 		print("backup parameters:\n");
 		print("    source    : $source\n");
 		print("    excludes  : $exclude\n");

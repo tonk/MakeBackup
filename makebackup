@@ -213,7 +213,7 @@ then
 	fi
 
 	echo
-	echo "Return code for the prebackup command: ${THISRC}"
+	echo "Returncode for the prebackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
@@ -390,7 +390,7 @@ do
 		echo
 		echo "     Cycle statistics"
 		echo "    ${s:4}"
-		echo "        Return code       : "${THISRC}
+		echo "        Returncode        : "${THISRC}
 		echo "        Used disk space   : "${USED}
 		echo "        Free disk space   : "${FREE}
 		echo "        Cycle end time    : "$(Now)
@@ -407,7 +407,7 @@ do
 		SUM="${SUM} FREE=${FREE};"
 		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
 		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
-		syslog "${SHRT[${CNT}]:-} :   Return code        : ${THISRC}"
+		syslog "${SHRT[${CNT}]:-} :   Returncode         : ${THISRC}"
 		syslog "${SHRT[${CNT}]:-} :   Used disk space    : "${USED}
 		syslog "${SHRT[${CNT}]:-} :   Free disk space    : "${FREE}
 		syslog "${SHRT[${CNT}]:-} :   Cycle run time     : "${RUN}
@@ -458,7 +458,7 @@ then
 			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 	echo
-	echo "Return code for the postbackup command: ${THISRC}"
+	echo "Returncode for the postbackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
