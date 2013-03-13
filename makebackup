@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 33 2012-05-02 08:14:54 tonk                              $: #
-# $Revision:: 33                                                            $: #
+# $Id:: makebackup 7152 2013-03-11 09:03:53Z tonk                           $: #
+# $Revision:: 32                                                            $: #
 # $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2012-05-02 08:15:03 +0200 (Wed, 02 May 2012)                      $: #
+# $Date:: 2011-05-24 09:13:28 +0200 (Tue, 24 May 2011)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -56,7 +56,7 @@ SETX=0; [[ ${-} = *x* ]] && SETX=1
 # Set and unset the needed shell settings                                      #
 #------------------------------------------------------------------------------#
 set +o noclobber            # Overwrite existing files, if needed              #
-set -o nounset              # Don't allow uninitialized variables              #
+set -o nounset              # Do not allow uninitialized variables             #
 set +o errexit              # No returncode checking                           #
 
 #------------------------------------------------------------------------------#
@@ -213,7 +213,7 @@ then
 	fi
 
 	echo
-	echo "Returncode for the prebackup command: ${THISRC}"
+	echo "Return code for the prebackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
@@ -259,7 +259,8 @@ then
 fi
 
 #------------------------------------------------------------------------------#
-# Create the backups for all defined sources and destinations                  #
+# Create the backups for all defined sources and destinations and remove the   #
+# ones that are obsolete                                                       #
 #------------------------------------------------------------------------------#
 for CNT in $(seq 1 ${BCKS})
 do
@@ -268,6 +269,33 @@ do
 		CYCLESTART=$(date '+%s')
 		CYCLESTARTTIME=$(Now)
 
+		#----------------------------------------------------------------------#
+		# Remove old backups if needed                                         #
+		#----------------------------------------------------------------------#
+		if [[ x"${REMOVE[${CNT}]:-}" = x"REMOVE_OBSOLETE_BACKUP" ]]
+		then
+			if [[ -d ${DST} ]]
+			then
+				#--------------------------------------------------------------#
+				# Make sure we do not remove the root                          #
+				#--------------------------------------------------------------#
+				if [[ x"${DST}" = x"/" ]]
+				then
+					echo "I will NOT remove the root for destination '${DST}'." >&2
+					syslog "I will NOT remove the root for destination '${DST}'."
+					continue
+				fi
+
+				echo "Removing the old backups for destination '${DST}'." >&2
+				syslog "Removing the old backups for destination '${DST}'."
+				rm -rf ${DST}
+				continue
+			fi
+		fi
+
+		#----------------------------------------------------------------------#
+		# Create the destination directory if it's not there yet               #
+		#----------------------------------------------------------------------#
 		[[ ! -d ${DST} ]] &&
 		{	mkdir -p ${DST}
 			chmod 700 ${DST}
@@ -322,7 +350,7 @@ do
 			echo "                            "${f}
 		done
 		echo "        Destination       : "${DST}
-		echo "        Number of cycles  : "${CYCLES}
+		echo "        Number of cycles  : "${MAX}
 		echo "        Cycle start time  : "$(Now)
 		echo "    ${s:4}"
 		echo
@@ -390,7 +418,7 @@ do
 		echo
 		echo "     Cycle statistics"
 		echo "    ${s:4}"
-		echo "        Returncode        : "${THISRC}
+		echo "        Return code       : "${THISRC}
 		echo "        Used disk space   : "${USED}
 		echo "        Free disk space   : "${FREE}
 		echo "        Cycle end time    : "$(Now)
@@ -407,7 +435,7 @@ do
 		SUM="${SUM} FREE=${FREE};"
 		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
 		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
-		syslog "${SHRT[${CNT}]:-} :   Returncode         : ${THISRC}"
+		syslog "${SHRT[${CNT}]:-} :   Return code        : ${THISRC}"
 		syslog "${SHRT[${CNT}]:-} :   Used disk space    : "${USED}
 		syslog "${SHRT[${CNT}]:-} :   Free disk space    : "${FREE}
 		syslog "${SHRT[${CNT}]:-} :   Cycle run time     : "${RUN}
@@ -458,7 +486,7 @@ then
 			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 	echo
-	echo "Returncode for the postbackup command: ${THISRC}"
+	echo "Return code for the postbackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
@@ -521,7 +549,7 @@ case "${MAILTO}"
 in
 	stdout)
 		#----------------------------------------------------------------------#
-		# Send the logging to syslog                                           #
+		# Send the logging to stdout                                           #
 		#----------------------------------------------------------------------#
 		cat ${LOGFILE}
 		;;
