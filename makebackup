@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 7152 2013-03-11 09:03:53Z tonk                           $: #
-# $Revision:: 32                                                            $: #
-# $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-05-24 09:13:28 +0200 (Tue, 24 May 2011)                      $: #
+# $Id:: makebackup 33 2013-03-29 08:47:19 tonk                              $: #
+# $Revision:: 33                                                            $: #
+# $Author:: Ton Kersten <github@tonkersten.com>                             $: #
+# $Date:: 2013-03-29 08:47:19 +0100 (Fri, 29 Mar 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -115,6 +115,8 @@ fi
 #------------------------------------------------------------------------------#
 # Start the logging                                                            #
 #------------------------------------------------------------------------------#
+exec 6>&1					# Save stdout into fd6                             #
+exec 7>&2					# Save stderr into fd7                             #
 exec > ${LOGFILE}
 exec 2>&1
 
@@ -213,7 +215,7 @@ then
 	fi
 
 	echo
-	echo "Return code for the prebackup command: ${THISRC}"
+	echo "Returncode for the prebackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
@@ -259,8 +261,7 @@ then
 fi
 
 #------------------------------------------------------------------------------#
-# Create the backups for all defined sources and destinations and remove the   #
-# ones that are obsolete                                                       #
+# Create the backups for all defined sources and destinations                  #
 #------------------------------------------------------------------------------#
 for CNT in $(seq 1 ${BCKS})
 do
@@ -269,33 +270,6 @@ do
 		CYCLESTART=$(date '+%s')
 		CYCLESTARTTIME=$(Now)
 
-		#----------------------------------------------------------------------#
-		# Remove old backups if needed                                         #
-		#----------------------------------------------------------------------#
-		if [[ x"${REMOVE[${CNT}]:-}" = x"REMOVE_OBSOLETE_BACKUP" ]]
-		then
-			if [[ -d ${DST} ]]
-			then
-				#--------------------------------------------------------------#
-				# Make sure we do not remove the root                          #
-				#--------------------------------------------------------------#
-				if [[ x"${DST}" = x"/" ]]
-				then
-					echo "I will NOT remove the root for destination '${DST}'." >&2
-					syslog "I will NOT remove the root for destination '${DST}'."
-					continue
-				fi
-
-				echo "Removing the old backups for destination '${DST}'." >&2
-				syslog "Removing the old backups for destination '${DST}'."
-				rm -rf ${DST}
-				continue
-			fi
-		fi
-
-		#----------------------------------------------------------------------#
-		# Create the destination directory if it's not there yet               #
-		#----------------------------------------------------------------------#
 		[[ ! -d ${DST} ]] &&
 		{	mkdir -p ${DST}
 			chmod 700 ${DST}
@@ -418,7 +392,7 @@ do
 		echo
 		echo "     Cycle statistics"
 		echo "    ${s:4}"
-		echo "        Return code       : "${THISRC}
+		echo "        Returncode        : "${THISRC}
 		echo "        Used disk space   : "${USED}
 		echo "        Free disk space   : "${FREE}
 		echo "        Cycle end time    : "$(Now)
@@ -435,7 +409,7 @@ do
 		SUM="${SUM} FREE=${FREE};"
 		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
 		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
-		syslog "${SHRT[${CNT}]:-} :   Return code        : ${THISRC}"
+		syslog "${SHRT[${CNT}]:-} :   Returncode         : ${THISRC}"
 		syslog "${SHRT[${CNT}]:-} :   Used disk space    : "${USED}
 		syslog "${SHRT[${CNT}]:-} :   Free disk space    : "${FREE}
 		syslog "${SHRT[${CNT}]:-} :   Cycle run time     : "${RUN}
@@ -486,7 +460,7 @@ then
 			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 	echo
-	echo "Return code for the postbackup command: ${THISRC}"
+	echo "Returncode for the postbackup command: ${THISRC}"
 	echo
 	echo "${d}"
 	echo
@@ -537,8 +511,8 @@ fi
 #------------------------------------------------------------------------------#
 # Clear the log redirection and insert the program status into the log         #
 #------------------------------------------------------------------------------#
-exec 1>&-
-exec 2>&-
+exec 1>&6 6>&-			# Restore stdout and close fd6                         #
+exec 2>&6 7>&-			# Restore stderr and close fd7                         #
 sed -i.bck "s/BACKUPSTATUS/${BCKSTATUS}/" ${LOGFILE}
 rm ${LOGFILE}.bck
 
@@ -562,6 +536,9 @@ in
 		;;
 
 	*)
+		#----------------------------------------------------------------------#
+		# Send the logging through mail                                        #
+		#----------------------------------------------------------------------#
 		SUBJ="Logging of '${IAM}' on '${HOSTNAME}' at $(Now) (RC=${BCKSTATUS})"
 		cat ${LOGFILE} | mail -s "${SUBJ}" ${MAILTO}
 		;;
