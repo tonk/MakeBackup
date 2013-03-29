@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 33 2013-03-29 08:47:19 tonk                              $: #
-# $Revision:: 33                                                            $: #
-# $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-03-29 08:47:19 +0100 (Fri, 29 Mar 2013)                      $: #
+# $Id:: makebackup 34 2013-03-29 09:05:49 tonk                              $: #
+# $Revision:: 34                                                            $: #
+# $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
+# $Date:: 2013-03-29 09:07:43 +0100 (Fri, 29 Mar 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -261,7 +261,8 @@ then
 fi
 
 #------------------------------------------------------------------------------#
-# Create the backups for all defined sources and destinations                  #
+# Create the backups for all defined sources and destinations and remove the   #
+# ones that are obsolete                                                       #
 #------------------------------------------------------------------------------#
 for CNT in $(seq 1 ${BCKS})
 do
@@ -270,6 +271,33 @@ do
 		CYCLESTART=$(date '+%s')
 		CYCLESTARTTIME=$(Now)
 
+		#----------------------------------------------------------------------#
+		# Remove old backups if needed                                         #
+		#----------------------------------------------------------------------#
+		if [[ x"${REMOVE[${CNT}]:-}" = x"REMOVE_OBSOLETE_BACKUP" ]]
+		then
+			if [[ -d ${DST} ]]
+			then
+				#--------------------------------------------------------------#
+				# Make sure we do not remove the root                          #
+				#--------------------------------------------------------------#
+				if [[ x"${DST}" = x"/" ]]
+				then
+					echo "I will NOT remove the root for destination '${DST}'." >&2
+					syslog "I will NOT remove the root for destination '${DST}'."
+					continue
+				fi
+
+				echo "Removing the old backups for destination '${DST}'." >&2
+				syslog "Removing the old backups for destination '${DST}'."
+				rm -rf ${DST}
+				continue
+			fi
+		fi
+
+		#----------------------------------------------------------------------#
+		# Create the destination directory if it's not there yet               #
+		#----------------------------------------------------------------------#
 		[[ ! -d ${DST} ]] &&
 		{	mkdir -p ${DST}
 			chmod 700 ${DST}

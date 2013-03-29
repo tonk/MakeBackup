@@ -19,7 +19,12 @@ install:
 	install -p -m 644 makebackup.conf	/home/tonk/bin
 	install -p -m 644 backupit			/home/tonk/bin
 	#
-	install -p -m 644 makebackup		/data/vhosts/tonkersten/html/files/makebackup
-	install -p -m 644 makebackup.conf	/data/vhosts/tonkersten/html/files/makebackup
-	install -p -m 644 backupit			/data/vhosts/tonkersten/html/files/makebackup
-	install -p -m 644 README  			/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 makebackup		/home/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 makebackup.conf	/home/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 backupit			/home/data/vhosts/tonkersten/html/files/makebackup
+	install -p -m 644 README  			/home/data/vhosts/tonkersten/html/files/makebackup
+	#
+	install -p -m 644 makebackup		/home/tonk/tonkersten/files/makebackup
+	install -p -m 644 makebackup.conf	/home/tonk/tonkersten/files/makebackup
+	install -p -m 644 backupit			/home/tonk/tonkersten/files/makebackup
+	install -p -m 644 README  			/home/tonk/tonkersten/files/makebackup
