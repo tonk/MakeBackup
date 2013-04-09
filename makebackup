@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 36 2013-04-09 08:28:02 tonk                              $: #
-# $Revision:: 36                                                            $: #
+# $Id:: makebackup 37 2013-04-09 09:08:27 tonk                              $: #
+# $Revision:: 37                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-04-09 08:28:10 +0200 (Tue, 09 Apr 2013)                      $: #
+# $Date:: 2013-04-09 09:08:34 +0200 (Tue, 09 Apr 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -228,7 +228,7 @@ fi
 #------------------------------------------------------------------------------#
 if [[ x"${BACKUPMYSQL:-no}" = x"yes" ]]
 then
-	syslog "Starting MyQL backup"
+	syslog "Starting MySQL backup"
 	if [[ -x ${CRD}/mysqlbackup ]]
 	then
 		echo "$(Now) -> ${IAM}: Starting MySQL backup on host '$(hostname)'"
@@ -242,7 +242,7 @@ then
 		syslog "Cannot find MySQL backup tool '${CRD}/mysqlbackup'"
 		syslog "MySQL backup will be skipped!!"
 	fi
-	syslog "Finished MyQL backup"
+	syslog "Finished MySQL backup"
 fi
 
 #------------------------------------------------------------------------------#
