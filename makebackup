@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 34 2013-03-29 09:05:49 tonk                              $: #
-# $Revision:: 34                                                            $: #
-# $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2013-03-29 09:07:43 +0100 (Fri, 29 Mar 2013)                      $: #
+# $Id:: makebackup 35 2013-04-09 07:43:53 tonk                              $: #
+# $Revision:: 35                                                            $: #
+# $Author:: Ton Kersten <github@tonkersten.com>                             $: #
+# $Date:: 2013-04-09 07:48:42 +0200 (Tue, 09 Apr 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -352,7 +352,7 @@ do
 			echo "                            "${f}
 		done
 		echo "        Destination       : "${DST}
-		echo "        Number of cycles  : "${MAX}
+		echo "        Number of cycles  : "${CYCLES}
 		echo "        Cycle start time  : "$(Now)
 		echo "    ${s:4}"
 		echo
