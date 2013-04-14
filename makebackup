@@ -473,7 +473,7 @@ fi
 #------------------------------------------------------------------------------#
 if [[ x"${POSTBACKUP:-}" != x"" ]]
 then
-	syslog "Starting pre backup command"
+	syslog "Starting post backup command"
 	echo "${d}"
 	echo "Postbackup command output."
 	echo
