@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 37 2013-04-09 09:08:27 tonk                              $: #
-# $Revision:: 37                                                            $: #
+# $Id:: makebackup 38 2013-05-27 09:42:28 tonk                              $: #
+# $Revision:: 38                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-04-09 09:08:34 +0200 (Tue, 09 Apr 2013)                      $: #
+# $Date:: 2013-05-27 09:42:50 +0200 (Mon, 27 May 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -264,8 +264,11 @@ fi
 # Create the backups for all defined sources and destinations and remove the   #
 # ones that are obsolete                                                       #
 #------------------------------------------------------------------------------#
+TOTALCYCLESTART=$(date '+%s')
 for CNT in $(seq 1 ${BCKS})
 do
+	syslog "Backup cycle for '${SHRT[${CNT}]:-}' starting..."
+	HOSTCYCLESTART=$(date '+%s')
 	for DST in ${DSTS[${CNT}]}
 	do
 		CYCLESTART=$(date '+%s')
@@ -448,7 +451,17 @@ do
 	echo
 	echo "${d}"
 	echo
+	HOSTCYCLEEND=$(date '+%s')
+	HOSTRUN=$(hms $(( ${HOSTCYCLEEND} - ${HOSTCYCLESTART} )) )
+	syslog "Backup cycle for '${SHRT[${CNT}]:-}' finished... (Run time: ${HOSTRUN})"
 done
+
+#------------------------------------------------------------------------------#
+# Statistics in syslog                                                         #
+#------------------------------------------------------------------------------#
+TOTALCYCLEEND=$(date '+%s')
+TOTALRUN=$(hms $(( ${TOTALCYCLEEND} - ${TOTALCYCLESTART} )) )
+syslog "Backup finished... (Run time: ${TOTALRUN})"
 
 #------------------------------------------------------------------------------#
 # Check if it all went well                                                    #
