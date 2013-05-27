@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 38 2013-05-27 09:42:28 tonk                              $: #
-# $Revision:: 38                                                            $: #
+# $Id:: makebackup 39 2013-05-27 09:47:08 tonk                              $: #
+# $Revision:: 39                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-05-27 09:42:50 +0200 (Mon, 27 May 2013)                      $: #
+# $Date:: 2013-05-27 09:47:16 +0200 (Mon, 27 May 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -447,6 +447,7 @@ do
 		syslog "${SHRT[${CNT}]:-} : Summary : ${SUM}"
 		syslog "${SHRT[${CNT}]:-} : Finished backup cycle for '${DESC[${CNT}]}'"
 		rm -f /tmp/${IAM}_${$}
+		syslog "Backup cycle for '${SHRT[${CNT}]:-}' to '${DST}' finished... (Run time: ${RUN})"
 	done
 	echo
 	echo "${d}"
