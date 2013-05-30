@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 11 2011-03-29 08:02:08 tonk                                $: #
-# $Revision:: 11                                                            $: #
-# $Author:: Ton Kersten <tonk@tonkersten.com>                               $: #
-# $Date:: 2011-03-29 08:02:42 +0200 (Tue, 29 Mar 2011)                      $: #
+# $Id:: backupit 12 2013-05-30 19:15:57 tonk                                $: #
+# $Revision:: 12                                                            $: #
+# $Author:: Ton Kersten <github@tonkersten.com>                             $: #
+# $Date:: 2013-05-30 19:16:19 +0200 (Thu, 30 May 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -45,7 +45,7 @@ use Term::ANSIColor;
 #------------------------------------------------------------------------------#
 # find out what my own name is                                                 #
 #------------------------------------------------------------------------------#
-my $version = "1.0";
+my $version = "1.1";
 my $iam = $0;
 $iam =~ s/.*\///;
 
@@ -228,13 +228,12 @@ sub do_backup($)
 	$ret = system("rsync -aRqx --delete -e ssh $exclude $source '$target' $devnull");
 	print("command ended with returncode $ret\n") if ($ret != 0);
 
-	if ($ret != 0)
+	if ( ($ret != 0) && ($ret != 24) )
 	{	print("backup failed with returncode $ret\n");
 		print("backup parameters:\n");
 		print("    source    : $source\n");
 		print("    excludes  : $exclude\n");
 		print("    target    : $target\n\n");
-		die("backup failed : rc = $ret");
 	}
 }
 
@@ -543,16 +542,16 @@ None that I know of
 
 =head1 AUTHOR
 
-Ton Kersten, TonK@Wandoo.nl
+Ton Kersten, TonK@Online.nl
 
 =head1 COPYRIGHT
 
-(c) Copyright 2008 by Ton Kersten, The Netherlands
+(c) Copyright 2008-2013 by Ton Kersten, The Netherlands
 
 Released under the GNU GPL version 2
 
 =head1 HISTORY
 
-This is the initial version
+This is the initial version, with a couple of patches
 
 =cut
