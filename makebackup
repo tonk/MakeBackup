@@ -129,12 +129,18 @@ PATH="${PATH}:/usr/bin:/usr/sbin"
 PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
 PATH="${PATH}:${CRD}"
 BCK="${CRD}/backupit"
+PID="/var/run/${IAM}.pid"
 HOSTNAME="$(hostname)"
 WD="80"                             # Screen width                             #
 s="$(printf "%${WD}s" "")"; s="${s// /-}"			# Single dash line         #
 d="$(printf "%${WD}s" "")"; d="${d// /=}"			# Double dash line         #
 typeset -i RC=0
 typeset -i BCKS=0
+
+#------------------------------------------------------------------------------#
+# Setup trapping to remove the PID file                                        #
+#------------------------------------------------------------------------------#
+trap "rm -f ${PID}" EXIT
 
 #------------------------------------------------------------------------------#
 # Announce the start of the program                                            #
@@ -154,6 +160,16 @@ echo
 syslog -f "Starting ${IAM}"
 
 #------------------------------------------------------------------------------#
+# Do we already have a PID file??? If not, create it.                          #
+#------------------------------------------------------------------------------#
+if [[ -f ${PID} ]]
+then
+	syslog -f "PID file ${PID} present. Skipping backup"
+	exit 0
+fi
+echo ${$} > ${PID}
+
+#------------------------------------------------------------------------------#
 # Read the config file                                                         #
 #------------------------------------------------------------------------------#
 if [[ -r "${CONFIGFILE}" ]]
@@ -161,11 +177,13 @@ then
 	. "${CONFIGFILE}" || {
 		echo "Error processing config '${CONFIGFILE}'!"
 		syslog -f "Error processing config '${CONFIGFILE}'!"
+		rm -f ${PID}
 		exit 1
 	}
 else
 	echo "Could not find config '${CONFIGFILE}'!" >&2
 	syslog -f "Could not find config '${CONFIGFILE}'!"
+	rm -f ${PID}
 	exit 1
 fi
 
@@ -257,6 +275,8 @@ then
 	syslog "The backup program '${BCK}' cannot be found!"
 	syslog "There is no way to create a backup."
 	syslog "The program will be stopped. (RC=1)"
+
+	rm -f ${PID}
 	exit 1
 fi
 
@@ -589,4 +609,5 @@ esac
 #------------------------------------------------------------------------------#
 # That's all, folks!                                                           #
 #------------------------------------------------------------------------------#
+rm -f ${PID}
 exit ${RC}
