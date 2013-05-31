@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 41 2013-05-31 20:40:54 tonk                              $: #
-# $Revision:: 41                                                            $: #
+# $Id:: makebackup 42 2013-05-31 20:51:11 tonk                              $: #
+# $Revision:: 42                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-05-31 20:42:43 +0200 (Fri, 31 May 2013)                      $: #
+# $Date:: 2013-05-31 20:51:26 +0200 (Fri, 31 May 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -91,13 +91,13 @@ syslog()
 {	if [[ x"${1:-}" = x"-f" ]]
 	then
 		shift
-		echo "${*:-}" | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info} --"
+		echo "${*:-}" | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 		return
 	fi
 
 	if [[ x"${SYSLOG:-0}" = x"1" ]]
 	then
-		echo "${*:-}" | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info} --"
+		echo "${*:-}" | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 }
 
@@ -229,7 +229,7 @@ then
 	if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
 	then
 		sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} 	| \
-			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info} --"
+			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 
 	echo
@@ -387,7 +387,7 @@ do
 		#----------------------------------------------------------------------#
 		if [[ x"${RSYNCOPTS:-}" != x"" ]]
 		then
-			RSYNCOPTS="--rsyncopts='${RSYNCOPTS}'"
+			RSYNCOPTS="--rsyncopts '${RSYNCOPTS}'"
 		fi
 		${BCK}					\
 			${VERBOSE}			\
@@ -410,7 +410,7 @@ do
 		if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
 		then
 			sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} | \
-				logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info} --"
+				logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 		fi
 
 		#----------------------------------------------------------------------#
@@ -524,7 +524,7 @@ then
 	if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
 	then
 		sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} | \
-			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info} --"
+			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 	echo
 	echo "Returncode for the postbackup command: ${THISRC}"
@@ -599,7 +599,7 @@ in
 		#----------------------------------------------------------------------#
 		# Send the logging to syslog                                           #
 		#----------------------------------------------------------------------#
-		cat ${LOGFILE} | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info} --"
+		cat ${LOGFILE} | logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 		;;
 
 	*)
