@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 12 2013-05-30 19:15:57 tonk                                $: #
-# $Revision:: 12                                                            $: #
+# $Id:: backupit 13 2013-05-31 20:36:09 tonk                                $: #
+# $Revision:: 13                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-05-30 19:16:19 +0200 (Thu, 30 May 2013)                      $: #
+# $Date:: 2013-05-31 20:42:43 +0200 (Fri, 31 May 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -100,6 +100,7 @@ sub usage(;$)
 		    -t | --target                : the destination for the backup tree
 		    -m | --max <max cycles>      : keep a maximum of <max> cycles
 		    -e | --exclude <glob string> : exclude pattern from source
+		    -r | --rsyncopts <string>    : add extra options to the rsync command
 		    -n | --name <string>         : name to use for the backup
 
 		This will create a maximum of <max cycles> directories in <target>
@@ -195,8 +196,9 @@ sub create_newcycle($$$)
 #------------------------------------------------------------------------------#
 # make the backup, using rsync                                                 #
 #------------------------------------------------------------------------------#
-sub do_backup($)
+sub do_backup($$)
 {	print("entering do_backup\n") if ($debug);
+	my $rsyncopts = shift;
 	my $target = shift;
 	my $ret = 1;
 	my $devnull;
@@ -219,13 +221,13 @@ sub do_backup($)
 	}
 
 	if ($debug)
-	{	print("rsync -aRqx --delete -e ssh $exclude $source '$target'\n");
+	{	print("rsync $rsyncopts -aRqx --delete -e ssh $exclude $source '$target'\n");
 		$devnull="";
 	}
 	else
 	{	$devnull=">/dev/null 2>&1";
 	}
-	$ret = system("rsync -aRqx --delete -e ssh $exclude $source '$target' $devnull");
+	$ret = system("rsync $rsyncopts -aRqx --delete -e ssh $exclude $source '$target' $devnull");
 	print("command ended with returncode $ret\n") if ($ret != 0);
 
 	if ( ($ret != 0) && ($ret != 24) )
@@ -274,6 +276,7 @@ sub main()
 	my $help;
 	my $target = "/tmp";
 	my $max_cycles = 14;
+	my $rsyncopts = '';
 	my $name = strftime('bck-%Y-%m-%d-%H.%M.%S', localtime());
 
 	#--------------------------------------------------------------------------#
@@ -293,6 +296,7 @@ sub main()
 				"target|t=s"	=> \$target,
 				"max|m=i"		=> \$max_cycles,
 				"name|n=s"		=> \$name,
+				"rsyncopts|r=s"	=> \$rsyncopts,
 				"exclude|e=s"	=> \@EXCLUDES,
 			);
 	usage("Unknown option(s): @ARGV") if ($#ARGV != -1);
@@ -359,7 +363,7 @@ sub main()
 	# previous cycle                                                           #
 	#--------------------------------------------------------------------------#
 	print("making backup\n") if ($debug);
-	do_backup($newcycle);
+	do_backup($rsyncopts, $newcycle);
 
 	#--------------------------------------------------------------------------#
 	# Create a new symlink                                                     #
@@ -437,6 +441,16 @@ See L<"OPTIONS"> for commandline option details.
 
 =back
 
+=item B<--rsyncopts>, B<-r>
+
+=over 8
+
+=item Add extra options to the Rsync command
+
+=item Default: <none>
+
+=back
+
 =item B<--source>, B<-s>
 
 =over 8
@@ -450,6 +464,7 @@ See L<"OPTIONS"> for commandline option details.
 =item B<--target>, B<-t>
 
 =over 8
+
 =item The location where the backup will be stored
 
 =item Default: /tmp
