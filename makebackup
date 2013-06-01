@@ -388,6 +388,8 @@ do
 		if [[ x"${RSYNCOPTS:-}" != x"" ]]
 		then
 			RSYNCOPTS="--rsyncopts='${RSYNCOPTS}'"
+		else
+			RSYNCOPTS=""
 		fi
 		${BCK}					\
 			${VERBOSE}			\
