@@ -22,10 +22,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: backupit 767 2013-05-31 21:14:21 tonk                               $: #
-# $Revision:: 767                                                           $: #
+# $Id:: backupit 768 2013-06-03 07:54:36 tonk                               $: #
+# $Revision:: 768                                                           $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-05-31 21:16:24 +0200 (Fri, 31 May 2013)                      $: #
+# $Date:: 2013-06-03 07:57:31 +0200 (Mon, 03 Jun 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -230,13 +230,15 @@ sub do_backup($$)
 	$ret = system("rsync $rsyncopts -aRqx --delete -e ssh $exclude $source '$target' $devnull");
 	print("command ended with returncode $ret\n") if ($ret != 0);
 
-	if ( ($ret != 0) && ($ret != 24) )
+	if ($ret != 0)
 	{	print("backup failed with returncode $ret\n");
 		print("backup parameters:\n");
 		print("    source    : $source\n");
 		print("    excludes  : $exclude\n");
 		print("    target    : $target\n\n");
 	}
+
+	return $ret;
 }
 
 
@@ -363,7 +365,7 @@ sub main()
 	# previous cycle                                                           #
 	#--------------------------------------------------------------------------#
 	print("making backup\n") if ($debug);
-	do_backup($rsyncopts, $newcycle);
+	my $ret = do_backup($rsyncopts, $newcycle);
 
 	#--------------------------------------------------------------------------#
 	# Create a new symlink                                                     #
@@ -377,11 +379,13 @@ sub main()
 	#--------------------------------------------------------------------------#
 	print("removing old cycles\n") if ($debug);
 	remove_oldcycles(\@cycles, $max_cycles) if ($max_cycles > 0);
+
+	return $ret;
 }
 
-main;
+my $ret = main;
 
-exit(0);
+exit($ret);
 
 
 #------------------------------------------------------------------------------#
