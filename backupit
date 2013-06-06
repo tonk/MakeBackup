@@ -230,6 +230,9 @@ sub do_backup($$)
 	$ret = system("rsync $rsyncopts -aRqx --delete -e ssh $exclude $source '$target' $devnull");
 	print("command ended with returncode $ret\n") if ($ret != 0);
 
+	# Return code is always '0' if it's larger than 256. Repair that.
+	$ret = ($ret >> 8) if ($ret > 256);
+
 	if ($ret != 0)
 	{	print("backup failed with returncode $ret\n");
 		print("backup parameters:\n");
