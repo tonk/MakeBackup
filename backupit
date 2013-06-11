@@ -26,7 +26,7 @@
 # $Revision:: 768                                                           $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
 # $Date:: 2013-06-03 07:57:31 +0200 (Mon, 03 Jun 2013)                      $: #
-# $Hash::                                                                   $: #
+# $Hash:: 7a24c5fcb17df558d5124a9e214cfd75c00854bd (tonk)                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
 #------------------------------------------------------------------------------#
@@ -219,6 +219,8 @@ sub do_backup($$)
 		}
 		print("in $target\n");
 	}
+
+	$rsyncopts = '--rsyncopts="' . $rsyncopts . '"' if ($rsyncopts ne '');
 
 	if ($debug)
 	{	print("rsync $rsyncopts -aRqx --delete -e ssh $exclude $source '$target'\n");
