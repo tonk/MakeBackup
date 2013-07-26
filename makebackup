@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 43 2013-05-31 20:57:40 tonk                              $: #
-# $Revision:: 43                                                            $: #
+# $Id:: makebackup 40 2013-07-26 15:25:07 tonk                              $: #
+# $Revision:: 40                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-05-31 20:58:14 +0200 (Fri, 31 May 2013)                      $: #
+# $Date:: 2013-07-26 15:43:37 +0200 (Fri, 26 Jul 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -129,18 +129,12 @@ PATH="${PATH}:/usr/bin:/usr/sbin"
 PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
 PATH="${PATH}:${CRD}"
 BCK="${CRD}/backupit"
-PID="/var/run/${IAM}.pid"
 HOSTNAME="$(hostname)"
 WD="80"                             # Screen width                             #
 s="$(printf "%${WD}s" "")"; s="${s// /-}"			# Single dash line         #
 d="$(printf "%${WD}s" "")"; d="${d// /=}"			# Double dash line         #
 typeset -i RC=0
 typeset -i BCKS=0
-
-#------------------------------------------------------------------------------#
-# Setup trapping to remove the PID file                                        #
-#------------------------------------------------------------------------------#
-trap "rm -f ${PID}" EXIT
 
 #------------------------------------------------------------------------------#
 # Announce the start of the program                                            #
@@ -160,16 +154,6 @@ echo
 syslog -f "Starting ${IAM}"
 
 #------------------------------------------------------------------------------#
-# Do we already have a PID file??? If not, create it.                          #
-#------------------------------------------------------------------------------#
-if [[ -f ${PID} ]]
-then
-	syslog -f "PID file ${PID} present. Skipping backup"
-	exit 0
-fi
-echo ${$} > ${PID}
-
-#------------------------------------------------------------------------------#
 # Read the config file                                                         #
 #------------------------------------------------------------------------------#
 if [[ -r "${CONFIGFILE}" ]]
@@ -177,13 +161,11 @@ then
 	. "${CONFIGFILE}" || {
 		echo "Error processing config '${CONFIGFILE}'!"
 		syslog -f "Error processing config '${CONFIGFILE}'!"
-		rm -f ${PID}
 		exit 1
 	}
 else
 	echo "Could not find config '${CONFIGFILE}'!" >&2
 	syslog -f "Could not find config '${CONFIGFILE}'!"
-	rm -f ${PID}
 	exit 1
 fi
 
@@ -275,8 +257,6 @@ then
 	syslog "The backup program '${BCK}' cannot be found!"
 	syslog "There is no way to create a backup."
 	syslog "The program will be stopped. (RC=1)"
-
-	rm -f ${PID}
 	exit 1
 fi
 
@@ -285,6 +265,7 @@ fi
 # ones that are obsolete                                                       #
 #------------------------------------------------------------------------------#
 TOTALCYCLESTART=$(date '+%s')
+TOTALDISKUSED=0
 for CNT in $(seq 1 ${BCKS})
 do
 	syslog "Backup cycle for '${SHRT[${CNT}]:-}' starting..."
@@ -385,16 +366,9 @@ do
 		#----------------------------------------------------------------------#
 		# Do the backup                                                        #
 		#----------------------------------------------------------------------#
-		if [[ x"${RSYNCOPTS:-}" != x"" ]]
-		then
-			RSYNCOPTS="--rsyncopts='${RSYNCOPTS}'"
-		else
-			RSYNCOPTS=""
-		fi
 		${BCK}					\
 			${VERBOSE}			\
 			${DEBUG}			\
-			${RSYNCOPTS}		\
 			${SRC}				\
 			${EXC}				\
 			--max=${CYCLES}		\
@@ -433,26 +407,31 @@ do
 		CYCLEENDTIME=$(Now)
 		if [[ -e ${DST}/latest/ ]]
 		then
-			USED="$(du -hs ${DST}/latest/ 2>/dev/null | awk '{ print $1 " (" $2 ")" }')"
+			USEDH="$(du -hs ${DST}/latest/ 2>/dev/null | awk '{ print $1 " (" $2 ")" }')"
+			USEDC="$(du -bs ${DST}/latest/ 2>/dev/null | awk '{ print $1 }')"
 		else
-			USED="Unknown"
+			USEDH="Unknown"
+			USEDC="Unknown"
 		fi
 
 		if [[ -e ${DST} ]]
 		then
-			FREE="$(df -hP ${DST} 2>/dev/null | awk ' !/^F/ { print $4 }')"
+			FREEH="$(df -hP ${DST} 2>/dev/null | awk ' !/^F/ { print $4 }')"
+			FREEC="$(df -P  ${DST} 2>/dev/null | awk ' !/^F/ { print $4 }')"
 		else
-			FREE="Unknown"
+			FREEH="Unknown"
+			FREEC="Unknown"
 		fi
 
 		RUN=$(hms $(( ${CYCLEEND} - ${CYCLESTART} )) )
+		TOTALDISKUSED=$(( ${TOTALDISKUSED} + ${USEDC} ))
 		echo
 		echo
 		echo "     Cycle statistics"
 		echo "    ${s:4}"
 		echo "        Returncode        : "${THISRC}
-		echo "        Used disk space   : "${USED}
-		echo "        Free disk space   : "${FREE}
+		echo "        Used disk space   : "${USEDH}
+		echo "        Free disk space   : "${FREEH}
 		echo "        Cycle end time    : "$(Now)
 		echo "        Cycle run time    : "${RUN}
 		echo "    ${s:4}"
@@ -463,16 +442,16 @@ do
 		SUM="${SUM} END=${CYCLEENDTIME};"
 		SUM="${SUM} RUN=${RUN};"
 		SUM="${SUM} RC=${THISRC};"
-		SUM="${SUM} USED=${USED};"
-		SUM="${SUM} FREE=${FREE};"
-		syslog "${SHRT[${CNT}]:-} :   Backup sources     : ${SRCTXT}"
-		syslog "${SHRT[${CNT}]:-} :   Backup destination : ${DST}"
-		syslog "${SHRT[${CNT}]:-} :   Returncode         : ${THISRC}"
-		syslog "${SHRT[${CNT}]:-} :   Used disk space    : "${USED}
-		syslog "${SHRT[${CNT}]:-} :   Free disk space    : "${FREE}
-		syslog "${SHRT[${CNT}]:-} :   Cycle run time     : "${RUN}
-		syslog "${SHRT[${CNT}]:-} : Summary : ${SUM}"
-		syslog "${SHRT[${CNT}]:-} : Finished backup cycle for '${DESC[${CNT}]}'"
+		SUM="${SUM} USED=${USEDH};"
+		SUM="${SUM} FREE=${FREEH};"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Backup_sources     = ${SRCTXT}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Backup_destination = ${DST}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Returncode         = ${THISRC}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Used_disk_space    = ${USEDC}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Free_disk_space    = ${FREEC}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Cycle_run_time     = ${RUN}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Summary            = ${SUM}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Finished backup cycle for '${DESC[${CNT}]}'"
 		rm -f /tmp/${IAM}_${$}
 		syslog "Backup cycle for '${SHRT[${CNT}]:-}' to '${DST}' finished... (Run time: ${RUN})"
 	done
@@ -481,7 +460,7 @@ do
 	echo
 	HOSTCYCLEEND=$(date '+%s')
 	HOSTRUN=$(hms $(( ${HOSTCYCLEEND} - ${HOSTCYCLESTART} )) )
-	syslog "Backup cycle for '${SHRT[${CNT}]:-}' finished... (Run time: ${HOSTRUN})"
+	syslog "Run_Time_${SHRT[${CNT}]:-} = ${HOSTRUN}"
 done
 
 #------------------------------------------------------------------------------#
@@ -489,7 +468,8 @@ done
 #------------------------------------------------------------------------------#
 TOTALCYCLEEND=$(date '+%s')
 TOTALRUN=$(hms $(( ${TOTALCYCLEEND} - ${TOTALCYCLESTART} )) )
-syslog "Backup finished... (Run time: ${TOTALRUN})"
+syslog "Total = Finished : Run_time        = ${TOTALRUN}"
+syslog "Total = Finished : Total_disk_used = ${TOTALDISKUSED})"
 
 #------------------------------------------------------------------------------#
 # Check if it all went well                                                    #
@@ -616,5 +596,4 @@ esac
 #------------------------------------------------------------------------------#
 # That's all, folks!                                                           #
 #------------------------------------------------------------------------------#
-rm -f ${PID}
 exit ${RC}
