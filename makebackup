@@ -23,10 +23,10 @@
 #------------------------------------------------------------------------------#
 #                    V e r s i o n   i n f o r m a t i o n                     #
 #------------------------------------------------------------------------------#
-# $Id:: makebackup 40 2013-07-26 15:25:07 tonk                              $: #
-# $Revision:: 40                                                            $: #
+# $Id:: makebackup 44 2013-08-06 17:43:42 tonk                              $: #
+# $Revision:: 44                                                            $: #
 # $Author:: Ton Kersten <github@tonkersten.com>                             $: #
-# $Date:: 2013-07-26 15:43:37 +0200 (Fri, 26 Jul 2013)                      $: #
+# $Date:: 2013-08-06 17:43:42 +0200 (Tue, 06 Aug 2013)                      $: #
 # $Hash::                                                                   $: #
 #------------------------------------------------------------------------------#
 #             E n d   o f   v e r s i o n   i n f o r m a t i o n              #
@@ -129,12 +129,18 @@ PATH="${PATH}:/usr/bin:/usr/sbin"
 PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
 PATH="${PATH}:${CRD}"
 BCK="${CRD}/backupit"
+PID="/var/run/${IAM}.pid"
 HOSTNAME="$(hostname)"
 WD="80"                             # Screen width                             #
 s="$(printf "%${WD}s" "")"; s="${s// /-}"			# Single dash line         #
 d="$(printf "%${WD}s" "")"; d="${d// /=}"			# Double dash line         #
 typeset -i RC=0
 typeset -i BCKS=0
+
+#------------------------------------------------------------------------------#
+# Setup trapping to remove the PID file                                        #
+#------------------------------------------------------------------------------#
+trap "rm -f ${PID}" EXIT
 
 #------------------------------------------------------------------------------#
 # Announce the start of the program                                            #
@@ -154,6 +160,16 @@ echo
 syslog -f "Starting ${IAM}"
 
 #------------------------------------------------------------------------------#
+# Do we already have a PID file??? If not, create it.                          #
+#------------------------------------------------------------------------------#
+if [[ -f ${PID} ]]
+then
+	syslog -f "PID file ${PID} present. Skipping backup"
+	exit 0
+fi
+echo ${$} > ${PID}
+
+#------------------------------------------------------------------------------#
 # Read the config file                                                         #
 #------------------------------------------------------------------------------#
 if [[ -r "${CONFIGFILE}" ]]
@@ -161,11 +177,13 @@ then
 	. "${CONFIGFILE}" || {
 		echo "Error processing config '${CONFIGFILE}'!"
 		syslog -f "Error processing config '${CONFIGFILE}'!"
+		rm -f ${PID}
 		exit 1
 	}
 else
 	echo "Could not find config '${CONFIGFILE}'!" >&2
 	syslog -f "Could not find config '${CONFIGFILE}'!"
+	rm -f ${PID}
 	exit 1
 fi
 
@@ -257,6 +275,8 @@ then
 	syslog "The backup program '${BCK}' cannot be found!"
 	syslog "There is no way to create a backup."
 	syslog "The program will be stopped. (RC=1)"
+
+	rm -f ${PID}
 	exit 1
 fi
 
@@ -366,9 +386,16 @@ do
 		#----------------------------------------------------------------------#
 		# Do the backup                                                        #
 		#----------------------------------------------------------------------#
+		if [[ x"${RSYNCOPTS:-}" != x"" ]]
+		then
+			RSYNCOPTS="--rsyncopts='${RSYNCOPTS}'"
+		else
+			RSYNCOPTS=""
+		fi
 		${BCK}					\
 			${VERBOSE}			\
 			${DEBUG}			\
+			${RSYNCOPTS}		\
 			${SRC}				\
 			${EXC}				\
 			--max=${CYCLES}		\
@@ -411,7 +438,7 @@ do
 			USEDC="$(du -bs ${DST}/latest/ 2>/dev/null | awk '{ print $1 }')"
 		else
 			USEDH="Unknown"
-			USEDC="Unknown"
+			USEDC="0"
 		fi
 
 		if [[ -e ${DST} ]]
@@ -420,7 +447,7 @@ do
 			FREEC="$(df -P  ${DST} 2>/dev/null | awk ' !/^F/ { print $4 }')"
 		else
 			FREEH="Unknown"
-			FREEC="Unknown"
+			FREEC="0"
 		fi
 
 		RUN=$(hms $(( ${CYCLEEND} - ${CYCLESTART} )) )
@@ -596,4 +623,5 @@ esac
 #------------------------------------------------------------------------------#
 # That's all, folks!                                                           #
 #------------------------------------------------------------------------------#
+rm -f ${PID}
 exit ${RC}
