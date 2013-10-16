@@ -227,7 +227,7 @@ then
 
 	if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
 	then
-		sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} 	| \
+		sed "s/^/${PREBACKUP:-} :   /" /tmp/${IAM}_${$} 	| \
 			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 
