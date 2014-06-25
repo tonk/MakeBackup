@@ -227,7 +227,7 @@ then
 
 	if [[ ( ${THISRC} != 0 ) && ( ${SYSLOG:-0} = 1 ) ]]
 	then
-		sed "s/^/${PREBACKUP:-} :   /" /tmp/${IAM}_${$} 	| \
+		sed "s/^/${SHRT[${CNT}]:-} :   /" /tmp/${IAM}_${$} 	| \
 			logger -t "${IAM}" -p "${SYSLOGFAC:-local4.info}"
 	fi
 
@@ -383,6 +383,8 @@ do
 		done
 		echo "        Destination       : "${DST}
 		echo "        Number of cycles  : "${CYCLES}
+		echo "        Monthly backups   : "${MONTHLY:-no}
+		echo "        Monthly cycles    : "${MONTHLYMAX:-12}
 		echo "        Cycle start time  : "$(Now)
 		echo "    ${s:4}"
 		echo
@@ -407,6 +409,38 @@ do
 			--max=${CYCLES}		\
 			--target=${DST} 2>&1 > /tmp/${IAM}_${$}
 		THISRC=${?}
+
+		#----------------------------------------------------------------------#
+		# Create the monthly backups?                                          #
+		#----------------------------------------------------------------------#
+		if [[ x"${MONTHLY:-no}" = x"yes" ]]
+		then
+			if [[ x"$(date '+%d')" = x"25" ]]
+			then
+				cd ${DST}/latest
+				pwd
+				if [[ ${?} = 0 ]]
+				then
+					echo "         Starting monthly backup cycle"
+					syslog "${SHRT[${CNT}]:-} : Starting monthly backup cycle'"
+					${BCK}								\
+						${VERBOSE}						\
+						${DEBUG}						\
+						${RSYNCOPTS}					\
+						--max=${MONTHLYMAX}				\
+						--source="."					\
+						--target=${DST}/_monthly_ 2>&1 >> /tmp/${IAM}_${$}
+					MONTHLYRC=${?}
+					if [[ ${MONTHLYRC} != 0 ]]
+					then
+						echo "         Monthly backup failed with RC=${MONTHLYRC}"
+						syslog "${SHRT[${CNT}]:-} : Monthly backup failed with RC=${MONTHLYRC}"
+					fi
+					cd - >/dev/null 2>&1
+				fi
+			fi
+		fi
+		THISRC=$(( ${THISRC} + ${MONTHLYRC:-0} ))
 
 		#----------------------------------------------------------------------#
 		# Parse the logfile and send it to the standard logging                #
@@ -480,6 +514,7 @@ do
 		syslog "BckHost = ${SHRT[${CNT}]:-} : Backup_sources     = ${SRCTXT}"
 		syslog "BckHost = ${SHRT[${CNT}]:-} : Backup_destination = ${DST}"
 		syslog "BckHost = ${SHRT[${CNT}]:-} : Returncode         = ${THISRC}"
+		syslog "BckHost = ${SHRT[${CNT}]:-} : Monthly returncode = ${MONTHLYRC:-0}"
 		syslog "BckHost = ${SHRT[${CNT}]:-} : Used_disk_space    = ${USEDC}"
 		syslog "BckHost = ${SHRT[${CNT}]:-} : Free_disk_space    = ${FREEC}"
 		syslog "BckHost = ${SHRT[${CNT}]:-} : Cycle_run_time     = ${RUN}"
